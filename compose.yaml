@@ -1,0 +1,12 @@
+services:
+  frontend:
+    platform: linux/amd64
+    build:
+      context: .
+      target: frontend-builder
+    container_name: webrunit-frontend
+    environment:
+      PORT: 8000
+    ports:
+      - '8000:8000'
+    restart: "no"
