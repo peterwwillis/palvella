@@ -1,4 +1,6 @@
 fastapi
 Flask
 asgiref
+flet
+flet-fastapi
 uvicorn

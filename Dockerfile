@@ -8,7 +8,7 @@ RUN --mount=type=cache,target=/root/.cache/pip pip -v install -r requirements.tx
 
 COPY ./frontend /app/frontend
 
-CMD ["uvicorn", "frontend.main:asgi_app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "frontend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 
 

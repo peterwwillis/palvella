@@ -1,8 +1,8 @@
 from asgiref.wsgi import WsgiToAsgi
 from flask import Flask
 
-app = Flask(__name__)
-asgi_app = WsgiToAsgi(app)
+wsgi_app = Flask(__name__)
+app = WsgiToAsgi(wsgi_app)
 
 @app.route("/")
 def hello():
