@@ -4,11 +4,11 @@ FROM python:3.9 AS frontend-builder
 
 WORKDIR /app
 COPY requirements.txt ./
-RUN --mount=type=cache,target=/root/.cache/pip pip -vvv install -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip -v install -r requirements.txt
 
 COPY ./frontend /app/frontend
 
-CMD ["uvicorn", "frontend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "frontend.main:asgi_app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 
 

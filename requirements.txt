@@ -1,2 +1,4 @@
 fastapi
+Flask
+asgiref
 uvicorn

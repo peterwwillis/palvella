@@ -5,8 +5,12 @@ services:
       context: .
       target: frontend-builder
     container_name: webrunit-frontend
+    volumes:
+      - ./frontend:/app/frontend
     environment:
       PORT: 8000
+      DEBUG: 1
+      #WATCHFILES_FORCE_POLLING: true
     ports:
       - '8000:8000'
-    restart: "no"
+    restart: "on-failure"
