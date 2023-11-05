@@ -8,8 +8,11 @@ RUN --mount=type=cache,target=/root/.cache/pip pip -v install -r requirements.tx
 
 COPY ./frontend /app/frontend
 
+# Uvicorn can use --interface option of 'auto', 'asgi3', 'asgi2', or 'wsgi'
 CMD ["uvicorn", "frontend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
+# WSGI
+#CMD ["waitress-serve", "--host", "127.0.0.1", "--port", "8000", "frontend.main:app" ]
 
 
 ###########################################################################
