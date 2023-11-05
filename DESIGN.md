@@ -69,7 +69,59 @@ In order to provide the functionality of a CI platform, the following use case s
     - The app evaluates the next step in the configuration to figure out what it should do next.
     - Once all steps are complete, the app should go back into its waiting loop.
 
-#### 2. Composing pipelines of applications
+
+#### 2. Terraform automation
+
+Be able to automate the plan and apply steps of Terraform, with a hold step in between plan and apply.
+
+1. User clicks UI -> run pipeline with parameters `deploy-terraform` => *true* and `environment` => *"nonprod"*
+2. Pipeline "deploy-terraform" starts.
+   1. Job "run-terraform-plan" runs.
+      - Name: "terraform-nonprod-plan"
+      - Args: `{"account": "project1", "environment":"nonprod"}`
+      - Stores changed files in job storage
+      - Finishes with success
+   1. Job "approve-if-changed" runs
+      - Requires: "terraform-nonprod-plan"
+      - Previous job has no changes, so approval is skipped
+      - Finishes with success
+   1. Job "run-terraform-apply" runs, finishes with success
+      - Name: "terraform-nonprod-apply"
+      - Args: `{"account": "project1", "environment":"nonprod"}`
+      - Loads changes files from job storage
+      - Finishes with success
+   1. Job "run-terraform-plan" runs.
+      - Name: "terraform-prod-plan"
+      - Args: `{"account": "project1", "environment":"prod"}`
+      - Test: if pipeline.parameters.environ != "prod", then skip job
+      - Loads changed files from job storage
+      - Finishes with success
+   1. Job "approve-if-changed" runs
+      - Requires: "terraform-prod-plan"
+      - Test: if pipeline.parameters.environ != "prod", then skip job
+      - Previous job has changes, so hold pipeline until approval is confirmed
+      - Finishes with success
+   1. Job "run-terraform-apply" runs, finishes with success
+      - Name: "terraform-prod-apply"
+      - Args: `{"account": "project1", "environment":"prod"}`
+      - Test: if pipeline.parameters.environ != "prod", then skip job
+      - Finishes with success
+
+Aspects of the job needed:
+ - Ability to set name of the job
+ - Ability to provide arguments to the job
+ - Ability to load files from storage, or put files in storage
+ - Ability to return specific job status
+ - Ability to run logic to evaluate if the job should proceed
+
+Aspects of the pipeline needed:
+ - Ability to run jobs in sequence or parallel
+ - Ability to 'require' a named job be completed
+ - Ability to hold pipeline execution until approval is confirmed
+ - Ability to skip a job in a pipeline
+
+
+#### 3. Composing pipelines of applications
 
 - The user clicks a button in the web interface of the app that says "Create new App Pipeline".
 
