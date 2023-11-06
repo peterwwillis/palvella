@@ -328,6 +328,15 @@ Jobs can specify a dependency on another Job.
 ###### Plugins: Category: Job: Parameters
 Jobs can take parameters:
  - `name`: The name of the Job.
+ - `engine`: The Engine to use for execution of Actions.
+ - `params`: A *list of objects* of Parameters for the job. These allow you to re-use a job later
+             and pass them parameters. Those parameters will show up in the job and
+             any actions as 'job.self.params.<name>'. The object should look
+             like this:
+    - `name`: The parameter name.
+    - `description`: A description of what this parameter is for.
+    - `type`: The type of parameter (list, object, string, boolean)
+    - `default`: The default value for this parameter.
 
 ###### Plugins: Category: Job: Methods
 A Job plugin uses a set of methods to interact with the Job and its Acions.
@@ -349,6 +358,9 @@ on some data, and return a status, as well as optional output.
 
 An action can be fully specified in configuration, or it can reference a library
 of actions.
+
+Actions inherit certain configuration from Jobs:
+ - `engine`: The engine to use for execution of the Action.
 
 ###### Plugins: Category: Action: Parameters
 Actions can take parameters:
@@ -408,14 +420,14 @@ Each engine takes parameters to configure it:
 The `local` engine runs commands in a shell on the same host that the *Worker* is
 running in.
 
-Options for this *Engine*:
+Parameters for this *Engine*:
  - `shell`: The shell to use to execute commands.
  - `environ`: An object of environment variables to set at execution time.
 
 ###### Plugins: Category: Engine: Type: `docker`
 The `docker` engine runs commands in a Docker container.
 
-Options for this *Engine*:
+Parameters for this *Engine*:
  - `environ`: An object of environment variables to set at execution time.
  - `volumes`: An **array of objects** specifying volumes to attach to the container at runtime.
       - `name`: The name of a directory or Docker volume.
