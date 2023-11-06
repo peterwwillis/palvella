@@ -171,6 +171,7 @@ Aspects of the pipeline needed:
   - Job is saved to database in a serialized format.
 
 
+---
 ### Plugins
 
 The program should use plugins to add functionality, and those plugins should be able to be installed
@@ -202,6 +203,7 @@ Categories:
  - Engine
 
 
+---
 ##### Plugins: Category: Authentication
 
 Authentication plugins provide a means to establish the authenticity of a request.
@@ -210,20 +212,21 @@ The plugin is configured so that it can request authentication status for a part
 Once the request comes back successfully, a new Authentication item is created for that identity,
 which can then be used with Authorization and Permission to validate a request.
 
-An Authentication exposes a set of methods used to determine authorization status.
-Example methods:
- - `config.host`: A host to connect to in order to request authentication.
+###### Plugins: Category: Authentication: Parameters
+An Authentication exposes a set of methods used to determine authorization status:
+ - `host`: A host to connect to in order to request authentication.
 
 Authentication plugins expose Identity, which is a combination of metadata that can be
 used later within the application to authorize requests. Some example properties of an
 Identity:
- - `config.name`: The name of this authentication plugin. (example: "Localhost")
- - `config.type`: The type of this authentication plugin. (example: localhost)
- - `config.domain`: A logical grouping of identities.
- - `config.credential`: A credential to pass to the authentication system to validate.
+ - `name`: The name of this authentication plugin. (example: "Localhost")
+ - `type`: The type of this authentication plugin. (example: localhost)
+ - `domain`: A logical grouping of identities.
+ - `credential`: A credential to pass to the authentication system to validate.
  - `status`: Whether the identity has been successfully authenticated or not.
 
 
+---
 ##### Plugins: Category: Authorization
 
 Authorization plugins provide a means to determine if a component of the system is authorized
@@ -233,31 +236,34 @@ to perform a particular function. For example, if a *Credential* is configured f
 Authorization plugins expose Authorizations, which are a pairing of identities and permissions.
 
 Authorization Role properties:
- - `config.name`: The name of this authorization. (example: "admins")
- - `config.type`: The type of this authorization. (example: "rbac")
+ - `name`: The name of this authorization. (example: "admins")
+ - `type`: The type of this authorization. (example: "rbac")
  - `identity`: The name of an identity which is authorized to do something.
  - `permission`: The name of a *Permission* which is authorized. This should be a list.
 
 
+---
 ##### Plugins: Category: Permission
 
 Permission plugins provide a mapping between components of the system and what those components
 are allowed or not allowed to have access to.
 
+###### Plugins: Category: Permission: object(Permission)
 Permission plugins expose Permissions, which are named objects that define a group of permission
 properties. Each Permission may have the following properties:
- - `config.identity` - The name of the authenticated identity which is requesting access. (example:
+ - `identity` - The name of the authenticated identity which is requesting access. (example:
                        "mydomain/myuser-123")
- - `config.resource` - The name of the resource which we are controlling access for. Should be
+ - `resource` - The name of the resource which we are controlling access for. Should be
                        a list. (examples: "job=my-job", "action=second-action", "log=action/12345",
                        "credential:name=my-ssh-key")
- - `config.method`   - The method that some system object wants to use, that we need to allow
+ - `method`   - The method that some system object wants to use, that we need to allow
                        or deny access to. Should be a list. (examples: 'credentialRead',
                        'credentialWrite', 'executorRun')
- - `config.effect`   - The effect that will be applied if the resource and method match on
+ - `effect`   - The effect that will be applied if the resource and method match on
                        what is being evaluated for permissions. (examples: "Allow", "Deny")
 
 
+---
 ##### Plugins: Category: Credential
 
 Credentials are objects which the app uses to provide authentication and authorization
@@ -268,29 +274,34 @@ and other uses.
 Credentials can receive configuration from environment variables, command-line arguments,
 or by lookup in a database.
 
-To use a Credential in configuration, you can add an object as a value for some
+To use a Credential in configuration, you can use an object as a value for some
 configuration option. The object should be like the following:
   - `from_credential`: Specifies that the value should come from the given Credential.
 
+###### Plugins: Category: Credential: Methods
 A Credential plugin uses a set of methods to access data. Example methods:
  - `add`
  - `remove`
  - `set_property`
  - `get_property`
 
-A Credential uses properties to define how it can be used. Example properties:
- - `config.name`: The name of the credential. Must be unique.
- - `config.type`: The type of the credential. (examples: "UsermameAndPassword",
+###### Plugins: Category: Credential: Parameters
+A Credential uses parameters to define how it can be used. Example properties:
+ - `name`: The name of the credential. Must be unique.
+ - `type`: The type of the credential. (examples: "UsermameAndPassword",
                   "Text", "SSH", "PKCS12Certificate", "Docker", "AWSECR", "Exec",
                   "GitHubOAuth", "OIDC")
+ - `data`: An object which defines the contents of the Credential.
 
 
+---
 ##### Plugins: Category: Database
 
 Databases are the basic unit of storage of data that the app needs to operate.
 It stores configuration about the app, as well as the state of Jobs within the
 app, and any other configuration or state necessary for the app to run.
 
+###### Plugins: Category: Database: Methods
 A Database plugin uses a set of methods to query the database. Example methods:
  - `add`
  - `remove`
@@ -300,21 +311,25 @@ A Database plugin uses a set of methods to query the database. Example methods:
  - `set_property`
 
 
+---
 ##### Plugins: Category: Job
 
 Jobs are the basic unit of work for the app. They perform logic on a set of data
 and determine the progress of the application.
 
 A Job that calls other Jobs is called a Pipeline. This is a logical distinction;
-there's nothing special about a Pipeline other than it is a series of Jobs, or a
-group of Jobs. Data is carried from one Job to another in the Pipeline.
+there's nothing special about a Pipeline other than it is a series or group
+of Jobs. Data is carried from one Job to another in the Pipeline.
 
-Job run Actions. Actions store their state within the logical unit of a Job.
-
-Jobs can take parameters.
+Jobs run Actions. Actions store their state within the logical unit of a Job.
 
 Jobs can specify a dependency on another Job.
 
+###### Plugins: Category: Job: Parameters
+Jobs can take parameters:
+ - `name`: The name of the Job.
+
+###### Plugins: Category: Job: Methods
 A Job plugin uses a set of methods to interact with the Job and its Acions.
 Example methods:
  - `add`
@@ -326,6 +341,7 @@ Example methods:
  - `get_property`
 
 
+---
 ##### Plugins: Category: Action
 
 Actions are the basic unit of logic executed by a Job. They perform computation
@@ -334,20 +350,28 @@ on some data, and return a status, as well as optional output.
 An action can be fully specified in configuration, or it can reference a library
 of actions.
 
-Actions can take parameters.
+###### Plugins: Category: Action: Parameters
+Actions can take parameters:
+ - `name`: The name of the Action.
+ - `type`: The type of the Action. These will be inferred in the Action if there
+           exists another Parameter 
 
 Actions can specify a dependency on another Step.
 
 Actions can be of a couple different types:
- - `run`: Run a command in a shell and return an exit code and stdout/stderr.
- - `approval`: Hold for approval.
 
-###### Plugins: Category: Action: `run`
+###### Plugins: Category: Action: Type: `run`
 The `run` action is configurable through a couple of different key/value options:
  - `shell`: The command and arguments used to run the shell.
+ - `command`: A string which is to be executed in the shell.
  - `engine`: The *Engine* used to run commands. This can either specify an
              already configured *Engine*, or you can configure one in-line.
 
+###### Plugins: Category: Action: Type: `approval`
+The `approval` action will pause the Job until an approval is given.
+
+
+###### Plugins: Category: Action: Methods
 An Action plugin uses a set of methods to perform its function. Example methods:
  - `action_add`
  - `action_remove`
@@ -358,7 +382,7 @@ An Action plugin uses a set of methods to perform its function. Example methods:
  - `action_get_property`
 
 
-
+---
 ##### Plugins: Category: Engine
 
 Engines are the method by which logic is executed.
@@ -374,18 +398,40 @@ an Action or Job. An instance of an Engine when it is executing logic for an
 Action or a Job is called a "Worker" (the same difference between a compiled
 executable file, and a running process).
 
-###### Plugins: Category: Engine: `local`
+
+###### Plugins: Category: Engine: Parameters
+Each engine takes parameters to configure it:
+ - `name`: The name of the Engine.
+ - `type`: The name of the 'type' of the Engine.
+
+###### Plugins: Category: Engine: Type: `local`
 The `local` engine runs commands in a shell on the same host that the *Worker* is
 running in.
 
 Options for this *Engine*:
  - `shell`: The shell to use to execute commands.
+ - `environ`: An object of environment variables to set at execution time.
 
-###### Plugins: Category: Engine: `docker`
+###### Plugins: Category: Engine: Type: `docker`
 The `docker` engine runs commands in a Docker container.
 
 Options for this *Engine*:
- - `host`: The hostname to connect to a Docker daemon.
+ - `environ`: An object of environment variables to set at execution time.
+ - `volumes`: An **array of objects** specifying volumes to attach to the container at runtime.
+      - `name`: The name of a directory or Docker volume.
+      - `path`: The path to mount the volume in the container.
+
+ - `context`: The name of a Docker context to use.
+ - `image`: The name of the Docker image and tag to execute.
+ - `platform`: The default Docker platform to use (`DOCKER_DEFAULT_PLATFORM`).
+ - `http_proxy`: The `HTTP_PROXY` environment variable. Used by the Docker CLI and daemon, not by running containers.
+ - `https_proxy`: The `HTTPS_PROXY` environment variable. Used by the Docker CLI and daemon, not by running containers.
+ - `no_proxy`: The `NO_PROXY` environment variable. Used by the Docker CLI and daemon, not by running containers.
+ - `host`: The connection method for the Docker daemon (`DOCKER_HOST`). For values see [here](https://docs.docker.com/engine/reference/commandline/cli/#a-namehosta-specify-daemon-host--h---host).
+ - `config.json`: An object that specifies configuration to pass to the `config.json` file.
+    - `proxies`: An object which specifies proxies to be configured in running Docker containers.
+      - `default`: An object which specifies the default proxies to use in running Docker containers.
+                   For values, see [here](https://docs.docker.com/engine/reference/commandline/cli/#automatic-proxy-configuration-for-containers).
  - `login`: An object with login information.
     - `username`: A username to use for Docker login.
     - `password`: A password to use for Docker login.
@@ -397,6 +443,7 @@ Options for this *Engine*:
                     `$HOME/.docker/config.json` file as a Docker [Credential Helper](https://docs.docker.com/engine/reference/commandline/login/#credential-helpers).
                     
 
+###### Plugins: Category: Engine: Platforms
 An Engine implements execution of logic within a "Platform". Sample platforms
 include:
  - Native (execution of code within the app itself)
@@ -406,6 +453,7 @@ include:
  - Kubernetes
  - AWS ECS
 
+###### Plugins: Category: Engine: Methods
 An Engine uses a set of methods to perform its functions. Example methods:
  - `engine_add`
  - `engine_init`
@@ -413,11 +461,4 @@ An Engine uses a set of methods to perform its functions. Example methods:
  - `engine_set_property`
  - `engine_get_property`
 
-Each Engine may use whatever properties it defines in order to configure the
-Engine. Some sample properties:
-
- - `config.name`: The name of the Engine. (example: "Docker", "Kubernetes")
- - `config.type`: The name of the 'type' of the Engine. (example: "docker")
- - `config.host`: A remote host to connect to.
- - `config.credentials`: A *Credentials* item to use as part of this platform.
 
