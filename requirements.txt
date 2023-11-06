@@ -4,6 +4,7 @@ asgiref
 flet
 flet-fastapi
 pywebio
+pywebio_battery
 uvicorn
 watchfiles
 waitress

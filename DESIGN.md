@@ -79,6 +79,8 @@ Be able to automate the plan and apply steps of Terraform, with a hold step in b
    1. Job "run-terraform-plan" runs.
       - Name: "terraform-nonprod-plan"
       - Args: `{"account": "project1", "environment":"nonprod"}`
+      - Steps:
+        - 
       - Stores changed files in job storage
       - Finishes with success
    1. Job "approve-if-changed" runs
@@ -266,6 +268,10 @@ and other uses.
 Credentials can receive configuration from environment variables, command-line arguments,
 or by lookup in a database.
 
+To use a Credential in configuration, you can add an object as a value for some
+configuration option. The object should be like the following:
+  - `from_credential`: Specifies that the value should come from the given Credential.
+
 A Credential plugin uses a set of methods to access data. Example methods:
  - `add`
  - `remove`
@@ -303,8 +309,11 @@ A Job that calls other Jobs is called a Pipeline. This is a logical distinction;
 there's nothing special about a Pipeline other than it is a series of Jobs, or a
 group of Jobs. Data is carried from one Job to another in the Pipeline.
 
-A Job is made up of one or more Actions. Actions store their state within the
-logical unit of a Job.
+Job run Actions. Actions store their state within the logical unit of a Job.
+
+Jobs can take parameters.
+
+Jobs can specify a dependency on another Job.
 
 A Job plugin uses a set of methods to interact with the Job and its Acions.
 Example methods:
@@ -322,6 +331,23 @@ Example methods:
 Actions are the basic unit of logic executed by a Job. They perform computation
 on some data, and return a status, as well as optional output.
 
+An action can be fully specified in configuration, or it can reference a library
+of actions.
+
+Actions can take parameters.
+
+Actions can specify a dependency on another Step.
+
+Actions can be of a couple different types:
+ - `run`: Run a command in a shell and return an exit code and stdout/stderr.
+ - `approval`: Hold for approval.
+
+###### Plugins: Category: Action: `run`
+The `run` action is configurable through a couple of different key/value options:
+ - `shell`: The command and arguments used to run the shell.
+ - `engine`: The *Engine* used to run commands. This can either specify an
+             already configured *Engine*, or you can configure one in-line.
+
 An Action plugin uses a set of methods to perform its function. Example methods:
  - `action_add`
  - `action_remove`
@@ -332,17 +358,44 @@ An Action plugin uses a set of methods to perform its function. Example methods:
  - `action_get_property`
 
 
+
 ##### Plugins: Category: Engine
 
-Engines are the basic unit of execution of logic, typically that of a Job.
+Engines are the method by which logic is executed.
+They are used to execute Actions within Jobs.
+
 While a Job specifies what we should execute, the Engine actually implements
 that execution. This allows us to abstract away the platform that the execution
 is performed on.
 
-An Engine may be a process which is running within a specific computing
-environment, or it may be instantiated dynamically at run-time as needed by
+An instance of an Engine may be a process which is already running within a specific
+computing environment, or it may be created dynamically at run-time as needed by
 an Action or Job. An instance of an Engine when it is executing logic for an
-Action or a Job is called a "Worker".
+Action or a Job is called a "Worker" (the same difference between a compiled
+executable file, and a running process).
+
+###### Plugins: Category: Engine: `local`
+The `local` engine runs commands in a shell on the same host that the *Worker* is
+running in.
+
+Options for this *Engine*:
+ - `shell`: The shell to use to execute commands.
+
+###### Plugins: Category: Engine: `docker`
+The `docker` engine runs commands in a Docker container.
+
+Options for this *Engine*:
+ - `host`: The hostname to connect to a Docker daemon.
+ - `login`: An object with login information.
+    - `username`: A username to use for Docker login.
+    - `password`: A password to use for Docker login.
+    - `credsStore`: The Docker [Credential Store](https://docs.docker.com/engine/reference/commandline/login/#configure-the-credential-store)
+                    to use to retrieve login credentials. If this option is passed,
+                    the `$HOME/.docker/config.json` file will be edited to use this option.
+    - `credHelpers`: An object with credential helper information.
+      - `registry` = `helpername`: Each item in this object will be added to the
+                    `$HOME/.docker/config.json` file as a Docker [Credential Helper](https://docs.docker.com/engine/reference/commandline/login/#credential-helpers).
+                    
 
 An Engine implements execution of logic within a "Platform". Sample platforms
 include:
