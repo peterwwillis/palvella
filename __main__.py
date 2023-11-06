@@ -1,23 +1,20 @@
+import os
+import logging
 
-from lib.job import Job
-from lib.action import Action
-from lib.engine import Engine
+DEBUG = os.environ.get('DEBUG','0')
 
-#import importlib
-#import pkgutil
-#import myapp.plugins
+logging.basicConfig()
+logging.getLogger().setLevel(logging.INFO)
+if DEBUG == "1":
+    logging.getLogger().setLevel(logging.DEBUG)
 
-#def iter_namespace(ns_pkg):
-#    return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
-#discovered_plugins = {
-#    name: importlib.import_module(name)
-#    for finder, name, ispkg
-#    in iter_namespace(myapp.plugins)
-#}
-#print("discovered: %s" % discovered_plugins)
+import webrunit
 
+from webrunit.lib.job import Job
+from webrunit.lib.action import Action
+from webrunit.lib.engine import Engine
 
-localengine = Engine(
+engine = Engine.init(
     name    = "local",
     type    = "local"
 )
@@ -25,7 +22,7 @@ localengine = Engine(
 
 tfjob = Job(
     name    =   "Terraform job",
-    engine  =   "docker",
+    engine  =   "local",
     params  =   [
                     {
                         "name": "account",
@@ -43,7 +40,7 @@ tfjob = Job(
     actions =   [
                     Action(
                         name="Terraform Plan",
-                        type="run",
+                        type="run", # todo: implement this in the engine
                     )
                 ]
 )
