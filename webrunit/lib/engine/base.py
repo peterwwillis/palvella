@@ -7,9 +7,7 @@ import importlib, pkgutil
 def iter_namespace(ns_pkg):
     return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
 
-discovered_plugins = {
-    name: importlib.import_module(name) for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.engine)
-}
+discovered_plugins = {}
 
 class Engine(object):
 
@@ -30,3 +28,8 @@ class Engine(object):
                     return plugin_ref(**kwargs)
                 else:
                     raise Exception("No such Engine type '%s'" % kwargs['type'])
+
+
+discovered_plugins = {
+    name: importlib.import_module(name) for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.engine)
+}

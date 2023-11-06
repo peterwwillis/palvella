@@ -1,12 +1,12 @@
 
 import logging
 
-#from webrunit.lib.engine.base import Engine
+from webrunit.lib.engine.base import Engine
 
 def init():
     return LocalEngine
 
-class LocalEngine(object):
+class LocalEngine(Engine):
     type = "local"
 
     def __init__(self, **kwargs):
