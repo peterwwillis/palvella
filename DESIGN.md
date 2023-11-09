@@ -52,7 +52,7 @@ In order to provide the functionality of a CI platform, the following use case s
   - Based on the options passed (via env/cmdline args), the app loads a plugin to connect to an SQL
     database. (this plugin may be bundled with the app)
   - The app connects to an SQL database with username/password from environment variables.
-  - A configuration file is read from the database which tells the server what it should execute
+  - A configuration is read from the database which tells the server what it should execute
     during the main loop.
   - The configuration specifies that it should execute a certain configuration if it receives a
     webhook call.

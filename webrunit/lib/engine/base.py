@@ -11,7 +11,6 @@ class Engine(object):
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
-        return
 
     @staticmethod
     def init(**kwargs):
@@ -20,7 +19,7 @@ class Engine(object):
         """
         logging.debug("Engine.init(%s)" % kwargs)
         plugins = {}
-        for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.db):
+        for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.engine):
             plugins[name] = importlib.import_module(name)
 
         if 'type' in kwargs:

@@ -21,7 +21,7 @@ class Job(object):
         """
         logging.debug("Job.init(%s)" % kwargs)
         plugins = {}
-        for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.db):
+        for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.job):
             plugins[name] = importlib.import_module(name)
 
         if 'type' in kwargs:
