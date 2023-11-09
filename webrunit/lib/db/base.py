@@ -1,13 +1,11 @@
-import logging
-
-import webrunit
-import webrunit.plugins.lib.db
 
 import importlib, pkgutil
+
+from webrunit.lib.logging import logging as logging
+import webrunit.plugins.lib.db
+
 def iter_namespace(ns_pkg):
     return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
-
-discovered_plugins = {}
 
 class DB(object):
 
@@ -23,20 +21,15 @@ class DB(object):
         """
         logging.debug("DB.init(%s)" % kwargs)
         plugins = {}
-        for k, v in discovered_plugins.items():
-            plugins[k] = v.init()
+        for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.db):
+            plugins[name] = importlib.import_module(name)
 
         if 'type' in kwargs:
             for plugin_name, plugin_ref in plugins.items():
-                bleh = plugin_ref()
-                if kwargs['type'] == bleh.type:
-                    logging.debug("Found DB type '%s', returning object '%s'" % (bleh.type, plugin_ref))
-                    return plugin_ref(**kwargs)
+                if kwargs['type'] == plugin_ref.type:
+                    logging.debug("Found DB type '%s', returning object '%s'" % (plugin_ref.type, plugin_ref))
+                    return plugin_ref.classref(**kwargs)
             raise Exception("No such DB type '%s'" % kwargs['type'])
 
         return DB(**kwargs)
 
-
-discovered_plugins = {
-    name: importlib.import_module(name) for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.db)
-}

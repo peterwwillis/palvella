@@ -1,0 +1,25 @@
+
+db:
+    - name: "sqlite"
+      type: "sqlite3"
+
+engine:
+    - name: "local"
+      type: "local"
+
+jobs:
+    - name: "Terraform plan-approve-apply pipeline"
+      engine: "local"
+      params:
+        - name: "account"
+          description: "The account to deploy Terraform in"
+          type: "string"
+          default: "project1"
+        - name: "environment"
+          description: "The environment to deploy Terraform in"
+          type: "string"
+          default: "nonprod"
+      actions:
+        - name: "Terraform plan"
+          type: run
+
