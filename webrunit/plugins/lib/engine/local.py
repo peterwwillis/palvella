@@ -10,6 +10,7 @@ class LocalEngine(Engine):
     type = "local"
 
     def __init__(self, **kwargs):
-        logging.debug("new LocalEngine('%s') created" % (kwargs))
+        logging.debug("LocalEngine(%s)" % kwargs)
+        self.__dict__.update(kwargs)
 
 logging.debug("Loaded plugin LocalEngine()")

@@ -1,7 +1,7 @@
 import logging
 
 import webrunit
-import webrunit.plugins.lib.engine
+import webrunit.plugins.lib.db
 
 import importlib, pkgutil
 def iter_namespace(ns_pkg):
@@ -9,9 +9,10 @@ def iter_namespace(ns_pkg):
 
 discovered_plugins = {}
 
-class Engine(object):
+class DB(object):
 
     def __init__(self, **kwargs):
+        logging.debug("DB.__init__(%s)" % kwargs)
         self.__dict__.update(kwargs)
         return
 
@@ -20,7 +21,7 @@ class Engine(object):
         """ Look for a plugin for this object and return it;
             otherwise return this object.
         """
-        logging.debug("Engine.init(%s)" % kwargs)
+        logging.debug("DB.init(%s)" % kwargs)
         plugins = {}
         for k, v in discovered_plugins.items():
             plugins[k] = v.init()
@@ -29,12 +30,13 @@ class Engine(object):
             for plugin_name, plugin_ref in plugins.items():
                 bleh = plugin_ref()
                 if kwargs['type'] == bleh.type:
-                    logging.debug("Found Engine type '%s', returning object '%s'" % (bleh.type, plugin_ref))
+                    logging.debug("Found DB type '%s', returning object '%s'" % (bleh.type, plugin_ref))
                     return plugin_ref(**kwargs)
-            raise Exception("No such Engine type '%s'" % kwargs['type'])
+            raise Exception("No such DB type '%s'" % kwargs['type'])
 
-        return Engine(**kwargs)
+        return DB(**kwargs)
+
 
 discovered_plugins = {
-    name: importlib.import_module(name) for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.engine)
+    name: importlib.import_module(name) for finder, name, ispkg in iter_namespace(webrunit.plugins.lib.db)
 }
