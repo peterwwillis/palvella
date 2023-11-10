@@ -6,6 +6,7 @@ from webrunit.lib.db import DB
 from webrunit.lib.job import Job
 from webrunit.lib.action import Action
 from webrunit.lib.engine import Engine
+from webrunit.lib.trigger import Trigger
 
 class Config(object):
 
@@ -40,4 +41,9 @@ class Config(object):
             assert( type(data['jobs']) == list ), "'jobs' value must be a list"
             for job in data['jobs']:
                 self.jobs.append( Job.init( **job ) )
+
+        if 'triggers' in data:
+            assert( type(data['jobs']) == list ), "'jobs' value must be a list"
+            for trigger in data['triggers']:
+                self.triggers.append( Trigger.init( **trigger ) )
 
