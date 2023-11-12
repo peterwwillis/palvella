@@ -1,6 +1,7 @@
 import asyncio
 import subprocess
 
+from ponyans.lib.logging import logging
 from .fastapi import APIRouter, app
 
 web_api = APIRouter()
@@ -9,4 +10,6 @@ web_api = APIRouter()
 async def foo():
    return {"message": "Hello World from main app"}
 
-app.include_router(web_api)
+async def plugin_init():
+    logging.debug("Including web_api router in FastAPI app")
+    app.include_router(web_api)

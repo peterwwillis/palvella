@@ -1,4 +1,5 @@
 
+import asyncio
 import sys
 import importlib, pkgutil
 
@@ -39,7 +40,7 @@ class PluginClass(object):
             raise Exception( "No such {} type '{}'".format(self.__class__.__name__, kwargs['type']) )
 
     @classmethod
-    def load_plugins(cls, **kwargs):
+    async def load_plugins(cls, **kwargs):
         """ If this class has a variable 'plugin_namespace', search that namespace
             for modules. If a module has the function 'plugin_init', run it, passing
             any kwargs passed to us.
@@ -55,6 +56,8 @@ class PluginClass(object):
         for plugin_name, plugin_ref in plugins.items():
             if hasattr(plugin_ref, "plugin_init") and callable(plugin_ref.plugin_init):
                 logging.debug("Loading plugin {}".format(plugin_name))
-                plugin_ref.plugin_init(**kwargs)
+                await plugin_ref.plugin_init(**kwargs)
                 logging.debug("Done loading plugin {}".format(plugin_name))
+            else:
+                logging.debug("No attribute 'plugin_init' in plugin {}".format(plugin_name))
 

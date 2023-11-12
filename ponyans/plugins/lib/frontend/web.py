@@ -28,5 +28,6 @@ async def main():
             await actions(buttons=["Continue"])
             #pywebio.output.clear()
 
-app.mount("/", FastAPI(routes=webio_routes(main)))
-
+async def plugin_init():
+    #app.mount("/", FastAPI(routes=webio_routes(main)))
+    pass
