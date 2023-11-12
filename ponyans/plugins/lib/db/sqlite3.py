@@ -1,8 +1,8 @@
 
 import sqlite3
 
-from webrunit.lib.logging import logging as logging
-from webrunit.lib.db.base import DB
+from ponyans.lib.logging import logging as logging
+from ponyans.lib.db.base import DB
 
 type = "sqlite3"
 
@@ -20,7 +20,7 @@ class SQLite3DB(DB):
     type = type
     conn = None
     cursor = None
-    db_path = "webrunit.sqlite3"
+    db_path = "ponyans.sqlite3"
 
     def __init__(self, **kwargs):
         """ When creating a new object, pass arbitrary key=value pairs to update the object.

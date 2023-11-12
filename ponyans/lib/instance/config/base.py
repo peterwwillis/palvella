@@ -1,12 +1,12 @@
 
 from ruamel.yaml import YAML
 
-from webrunit.lib.logging import logging as logging
-from webrunit.lib.db import DB
-from webrunit.lib.job import Job
-from webrunit.lib.action import Action
-from webrunit.lib.engine import Engine
-from webrunit.lib.trigger import Trigger
+from ponyans.lib.logging import logging as logging
+from ponyans.lib.db import DB
+from ponyans.lib.job import Job
+from ponyans.lib.action import Action
+from ponyans.lib.engine import Engine
+from ponyans.lib.trigger import Trigger
 
 class Config(object):
 

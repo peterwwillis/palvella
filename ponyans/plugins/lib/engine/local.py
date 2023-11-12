@@ -1,6 +1,6 @@
 
-from webrunit.lib.logging import logging as logging
-from webrunit.lib.engine.base import Engine
+from ponyans.lib.logging import logging as logging
+from ponyans.lib.engine.base import Engine
 
 type = "local"
 

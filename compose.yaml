@@ -4,9 +4,9 @@ services:
     build:
       context: .
       target: frontend-builder
-    container_name: webrunit-frontend
+    container_name: ponyans-frontend
     volumes:
-      - ./webrunit/frontend:/app/frontend
+      - ./ponyans/frontend:/app/frontend
     environment:
       PORT: 8000
       DEBUG: 1

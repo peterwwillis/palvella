@@ -5,8 +5,8 @@
 
 from github_webhook import Webhook
 
-from webrunit.lib.logging import logging as logging
-from webrunit.lib.trigger.base import Trigger
+from ponyans.lib.logging import logging as logging
+from ponyans.lib.trigger.base import Trigger
 
 type = "github_webhook"
 

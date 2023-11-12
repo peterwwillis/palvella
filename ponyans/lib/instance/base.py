@@ -1,5 +1,5 @@
 
-from webrunit.lib.logging import logging as logging
+from ponyans.lib.logging import logging as logging
 from .config.base import Config
 
 class Instance(object):

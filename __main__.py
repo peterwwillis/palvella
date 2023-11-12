@@ -1,12 +1,12 @@
 
-import webrunit.lib.logging
+import ponyans.lib.logging
 
-from webrunit.lib.instance import Instance
+from ponyans.lib.instance import Instance
 
-from webrunit.lib.db import DB
-from webrunit.lib.job import Job
-from webrunit.lib.action import Action
-from webrunit.lib.engine import Engine
+from ponyans.lib.db import DB
+from ponyans.lib.job import Job
+from ponyans.lib.action import Action
+from ponyans.lib.engine import Engine
 
 
 instance = Instance()

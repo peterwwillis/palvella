@@ -1,6 +1,6 @@
 
-from webrunit.lib.logging import logging as logging
-from webrunit.lib.action.base import Action
+from ponyans.lib.logging import logging as logging
+from ponyans.lib.action.base import Action
 
 type = "run"
 
