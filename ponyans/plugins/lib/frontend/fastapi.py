@@ -3,7 +3,7 @@ import asyncio
 import uvicorn
 
 import fastapi
-from fastapi import FastAPI, APIRouter
+from fastapi import * # FastAPI, APIRouter
 
 app = FastAPI()
 

@@ -5,6 +5,7 @@ from ponyans.lib import *
 
 async def main():
     await Frontend.load_plugins()
+    await Trigger.load_plugins()
 
     # Infinite loop to wait for tasks to die and finally exit ourselves.
     # Without this, final task (this function) will not exit sanely on signals.

@@ -2,11 +2,16 @@
 # due to that module being written for Flask.
 # That code is licensed here: https://github.com/bloomberg/python-github-webhook/blob/master/LICENSE
 
+import six
+import hmac
+from typing import Any
 
-from github_webhook import Webhook
+from starlette.responses import HTMLResponse, JSONResponse
+
+from ponyans.plugins.lib.frontend.fastapi import FastAPI, Request, Response, app
 
 from ponyans.lib.logging import logging as logging
-from ponyans.lib.trigger.base import Trigger
+from ponyans.lib.trigger import Trigger
 
 type = "github_webhook"
 
@@ -23,63 +28,53 @@ class GitHub_Webhook(Trigger):
         logging.debug("GitHub_Webhook(%s)" % (kwargs))
         self.__dict__.update(kwargs)
 
-        # initialize above as webhook = GitHub_Webhook(web_app=web_app, endpoint=endpoint, secret=secret)
-        if app is not None:
-            self.init_app(app, endpoint, secret)
-
-    def init_app(self, app, endpoint="/postreceive", secret=None):
-        self._hooks = collections.defaultdict(list)
-        self._logger = logging.getLogger("webhook")
-        if secret is not None:
-            self.secret = secret
-        # Flask function
-        app.add_url_rule(rule=endpoint, endpoint=endpoint, view_func=self._postreceive, methods=["POST"])
-
-    def _get_digest(self):
+    async def get_digest(self, request):
         """Return message digest if a secret key was provided"""
         return hmac.new(self._secret, request.data, hashlib.sha1).hexdigest() if self._secret else None
 
-    def hook(self, event_type="push"):
-        def decorator(func):
-            self._hooks[event_type].append(func)
-            return func
-        return decorator
+    @staticmethod
+    def get_header(request, key):
+        """Return message header"""
+        logging.debug("headers: '{}'".format(request.headers))
+        try:
+            return request.headers.get(key)
+        except KeyError:
+            JSONResponse('{"error": "Missing header: ' + key + '"}', status_code=400)
 
-    def _postreceive(self):
-        """Callback from Flask"""
+    #def __init__(self, **extra: Any):
+    #    super().__init__(**extra)
+    #    #self.add_api_route("/", self.get_root, methods=["GET"], include_in_schema=False)
+    #    #self.add_api_route("/version", self.get_version, methods=["GET"])
 
-        digest = self._get_digest()
+    async def github_webhook(self, request: Request):
+        digest = self.get_digest(request)
         if digest is not None:
-            sig_parts = _get_header("X-Hub-Signature").split("=", 1)
+            foo = self.get_header(request, "X-Hub-Signature")
+            logging.debug("foo: '{}'".format(foo))
+            sig_parts = foo.split("=", 1)
             if not isinstance(digest, six.text_type):
                 digest = six.text_type(digest)
             if len(sig_parts) < 2 or sig_parts[0] != "sha1" or not hmac.compare_digest(sig_parts[1], digest):
-                abort(400, "Invalid signature")
+                return JSONResponse({"error": "Invalid signature"}, status_code=400)
 
-        event_type = _get_header("X-Github-Event")
-        content_type = _get_header("content-type")
+        event_type = self.get_header(request, "X-Github-Event")
+        content_type = self.get_header(request, "content-type")
         data = (
             json.loads(request.form.to_dict(flat=True)["payload"])
             if content_type == "application/x-www-form-urlencoded"
             else request.get_json()
         )
         if data is None:
-            abort(400, "Request body must contain json")
-        self._logger.info("%s (%s)", _format_event(event_type, data), _get_header("X-Github-Delivery"))
-        for hook in self._hooks.get(event_type, []):
-            hook(data)
-        return "", 204
+            return JSONResponse({"error": "Request body must contain json"}, status_code=400)
+        self._logger.info("%s (%s)", _format_event(event_type, data), self.get_header(request, "X-Github-Delivery"))
+        # TODO: implement me
+        #for hook in self._hooks.get(event_type, []):
+        #    hook(data)
+        return JSONResponse("", status_code=204)
 
-def _get_header(key):
-    """Return message header"""
-    try:
-        return request.headers[key]
-    except KeyError:
-        abort(400, "Missing header: " + key)
 
-webhook = GitHub_Webhook(app) # Defines '/postreceive' endpoint
+webhook = GitHub_Webhook() # Defines '/postreceive' endpoint
 
-@webhook.hook()
-def on_push(data):
-    print("Got push with: {0}".format(data))
+async def plugin_init():
+    app.add_api_route("/github_webhook", webhook.github_webhook, methods=["POST"])
 
