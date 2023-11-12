@@ -1,12 +1,14 @@
 
 from ruamel.yaml import YAML
 
-from ponyans.lib.logging import logging as logging
-from ponyans.lib.db import DB
-from ponyans.lib.job import Job
-from ponyans.lib.action import Action
-from ponyans.lib.engine import Engine
-from ponyans.lib.trigger import Trigger
+from ponyans.lib.plugin_base import PluginClass
+
+from .logging import logging
+from .db import DB
+from .job import Job
+from .action import Action
+from .engine import Engine
+from .trigger import Trigger
 
 class Config(object):
 
@@ -46,4 +48,13 @@ class Config(object):
             assert( type(data['jobs']) == list ), "'jobs' value must be a list"
             for trigger in data['triggers']:
                 self.triggers.append( Trigger.init( **trigger ) )
+
+
+class Instance(PluginClass):
+    plugin_namespace = "ponyans.plugins.lib.instance"
+
+    def __init__(self, **kwargs):
+        logging.debug("Instance.__init__(%s)" % kwargs)
+        self.__dict__.update(kwargs)
+        self.config = Config()
 

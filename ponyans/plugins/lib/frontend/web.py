@@ -1,19 +1,12 @@
 import asyncio
 import subprocess
 
-import fastapi
-from fastapi import FastAPI
+from .fastapi import FastAPI, APIRouter, app
+
 import pywebio
 from pywebio.input import *
 from pywebio.output import *
-from pywebio import start_server
 from pywebio.platform.fastapi import webio_routes
-
-app = FastAPI()
-
-@app.get("/foo")
-async def foo():
-   return {"message": "Hello World from main app"}
 
 async def main():
     pywebio.session.set_env(title='Awesome PyWebIO!!', output_animation=False)

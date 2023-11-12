@@ -6,7 +6,7 @@ services:
       target: frontend-builder
     container_name: ponyans-frontend
     volumes:
-      - ./ponyans/frontend:/app/frontend
+      - ./ponyans:/app/ponyans
     environment:
       PORT: 8000
       DEBUG: 1

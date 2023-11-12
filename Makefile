@@ -1,12 +1,17 @@
 
 help:
 	@echo "Make targets:"
+	@echo "    venv"
 	@echo "    run"
 	@echo "    compose-up"
 	@echo "    compose-down"
 
+venv:
+	[ -d venv ] || python3 -m venv ./venv
+	./venv/bin/pip3 install -r requirements.txt
+
 run:
-	python3 ./
+	./venv/bin/python3 app.py
 
 compose-up:
 	docker compose build $(DOCKER_COMPOSE_BUILD_ARGS)

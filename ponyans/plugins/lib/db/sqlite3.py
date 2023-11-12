@@ -20,7 +20,7 @@ class SQLite3DB(DB):
     type = type
     conn = None
     cursor = None
-    db_path = "ponyans.sqlite3"
+    db_path = "db.sqlite3"
 
     def __init__(self, **kwargs):
         """ When creating a new object, pass arbitrary key=value pairs to update the object.

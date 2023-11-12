@@ -6,10 +6,13 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN --mount=type=cache,target=/root/.cache/pip pip -v install -r requirements.txt
 
-COPY ./frontend /app/frontend
+COPY ./ /app/
+
+# Allow the app to start its own web server(s)
+CMD ["/app/app.py"]
 
 # Uvicorn can use --interface option of 'auto', 'asgi3', 'asgi2', or 'wsgi'
-CMD ["uvicorn", "frontend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+#CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # WSGI
 #CMD ["waitress-serve", "--host", "127.0.0.1", "--port", "8000", "frontend.main:app" ]
