@@ -6,7 +6,7 @@ services:
       target: frontend-builder
     container_name: webrunit-frontend
     volumes:
-      - ./frontend:/app/frontend
+      - ./webrunit/frontend:/app/frontend
     environment:
       PORT: 8000
       DEBUG: 1
