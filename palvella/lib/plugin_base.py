@@ -5,8 +5,16 @@ import importlib, pkgutil
 
 from .logging import logging
 
-def iter_namespace(ns_pkg):
-    return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
+def list_plugins(cls):
+    """ Accepts a class, which needs an attribute 'plugin_namespace', whose value is a string
+        which is the name of a module to load. Loads that module and iterates over the namespace,
+        yielding the name of modules in said namespace.
+    """
+    module = importlib.import_module(cls.plugin_namespace)
+    logging.debug("cls '{}', namespace '{}', module '{}'".format(cls, cls.plugin_namespace, module))
+    for finder, name, ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
+        logging.debug("Found plugin '{}'".format(name))
+        yield name, importlib.import_module(name)
 
 class PluginClass(object):
 
@@ -15,29 +23,28 @@ class PluginClass(object):
         self.__dict__.update(kwargs)
         return
 
-    @staticmethod
-    def init(**kwargs):
+    @classmethod
+    def init(cls, **kwargs):
         """ Look for a plugin for this object, and return a new object of that plugin
             with its own class (that inherits this class - or should, anyway).
             Otherwise return this class's object.
         """
-        logging.debug( "{}.init({})".format(self.__class__.__name__,kwargs) )
-        plugins = {}
-        for finder, name, ispkg in iter_namespace(palvella.plugins.lib.frontend):
-            plugins[name] = importlib.import_module(name)
+        logging.debug( "{}.init({})".format(cls.__class__.__name__,kwargs) )
+
+        plugins = dict(list_plugins(cls))
 
         if 'type' in kwargs:
             for plugin_name, plugin_ref in plugins.items():
                 if kwargs['type'] == plugin_ref.type:
                     logging.debug(
                         "Found {} type '{}', returning object '{}'".format(
-                            self.__class__.__name__,
+                            cls.__class__.__name__,
                             plugin_ref.type,
                             plugin_ref
                         )
                     )
                     return plugin_ref.classref(**kwargs)
-            raise Exception( "No such {} type '{}'".format(self.__class__.__name__, kwargs['type']) )
+            raise Exception( "No such {} type '{}'".format(cls.__class__.__name__, kwargs['type']) )
 
     @classmethod
     async def load_plugins(cls, **kwargs):
@@ -46,12 +53,8 @@ class PluginClass(object):
             any kwargs passed to us.
         """
         logging.debug("load_plugins(): starting")
-        module = importlib.import_module(cls.plugin_namespace)
 
-        plugins = {}
-        for finder, name, ispkg in iter_namespace( module ):
-            logging.debug("Found plugin '{}'".format(name))
-            plugins[name] = importlib.import_module(name)
+        plugins = dict(list_plugins(cls))
 
         for plugin_name, plugin_ref in plugins.items():
             if hasattr(plugin_ref, "plugin_init") and callable(plugin_ref.plugin_init):

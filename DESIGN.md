@@ -79,8 +79,6 @@ Be able to automate the plan and apply steps of Terraform, with a hold step in b
    1. Job "run-terraform-plan" runs.
       - Name: "terraform-nonprod-plan"
       - Args: `{"account": "project1", "environment":"nonprod"}`
-      - Steps:
-        - 
       - Stores changed files in job storage
       - Finishes with success
    1. Job "approve-if-changed" runs
