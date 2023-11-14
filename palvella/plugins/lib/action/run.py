@@ -1,6 +1,6 @@
 
-from palvella.lib.logging import logging as logging
 from palvella.lib.action import Action
+from palvella.lib.logging import logging as logging
 
 type = "run"
 

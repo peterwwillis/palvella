@@ -1,6 +1,6 @@
 
-import os
 import logging
+import os
 
 DEBUG = os.environ.get('DEBUG', '0')
 

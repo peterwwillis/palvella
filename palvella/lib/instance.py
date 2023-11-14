@@ -3,11 +3,11 @@ from ruamel.yaml import YAML
 
 from palvella.lib.plugin_base import PluginClass
 
-from .logging import logging
-from .db import DB
-from .job import Job
 from .action import Action
+from .db import DB
 from .engine import Engine
+from .job import Job
+from .logging import logging
 from .trigger import Trigger
 
 

@@ -1,8 +1,8 @@
 
 import sqlite3
 
-from palvella.lib.logging import logging as logging
 from palvella.lib.db import DB
+from palvella.lib.logging import logging as logging
 
 type = "sqlite3"
 

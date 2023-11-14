@@ -1,9 +1,9 @@
 
 import asyncio
-import uvicorn
 
+import uvicorn
 # These are later imported by other plugins
-from fastapi import FastAPI, APIRouter, Request, Response  # noqa: F401
+from fastapi import APIRouter, FastAPI, Request, Response  # noqa: F401
 
 app = FastAPI()
 

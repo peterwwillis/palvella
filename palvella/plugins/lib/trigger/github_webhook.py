@@ -2,17 +2,18 @@
 # due to that module being written for Flask.
 # That code is licensed here: https://github.com/bloomberg/python-github-webhook/blob/master/LICENSE
 
+import hashlib
 import hmac
 import json
-import hashlib
-# from typing import Any
 
 from starlette.responses import JSONResponse
 
-from palvella.plugins.lib.frontend.fastapi import Request, app
-
 from palvella.lib.logging import logging
 from palvella.lib.trigger import Trigger
+from palvella.plugins.lib.frontend.fastapi import Request, app
+
+# from typing import Any
+
 
 type = "github_webhook"
 

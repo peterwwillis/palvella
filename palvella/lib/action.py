@@ -1,6 +1,9 @@
 
-from .logging import logging
+"""The library for Actions. Defines plugin class and some base functions."""
+
 from palvella.lib.plugin_base import PluginClass
+
+from .logging import logging
 
 
 class Action(PluginClass):

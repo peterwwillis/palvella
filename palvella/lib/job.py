@@ -1,6 +1,7 @@
 
-from .logging import logging
 from palvella.lib.plugin_base import PluginClass
+
+from .logging import logging
 
 
 class Job(PluginClass):

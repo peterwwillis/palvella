@@ -1,4 +1,5 @@
 from palvella.lib.logging import logging
+
 from .fastapi import APIRouter, app
 
 web_api = APIRouter()
