@@ -1,6 +1,6 @@
 
-from ponyans.lib.logging import logging as logging
-from ponyans.lib.engine.base import Engine
+from palvella.lib.logging import logging as logging
+from palvella.lib.engine.base import Engine
 
 type = "local"
 

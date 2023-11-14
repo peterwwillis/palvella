@@ -23,7 +23,7 @@ class PluginClass(object):
         """
         logging.debug( "{}.init({})".format(self.__class__.__name__,kwargs) )
         plugins = {}
-        for finder, name, ispkg in iter_namespace(ponyans.plugins.lib.frontend):
+        for finder, name, ispkg in iter_namespace(palvella.plugins.lib.frontend):
             plugins[name] = importlib.import_module(name)
 
         if 'type' in kwargs:

@@ -1,7 +1,7 @@
 import asyncio
 import subprocess
 
-from ponyans.lib.logging import logging
+from palvella.lib.logging import logging
 from .fastapi import APIRouter, app
 
 web_api = APIRouter()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
-from ponyans.lib import *
+from palvella.lib import *
 
 async def main():
     await Frontend.load_plugins()

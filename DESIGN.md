@@ -2,11 +2,11 @@
 
 ## About
 
-This document describes the design of the program 'ponyans', a web interface to command-line applications.
+This document describes the design of the program 'palvella', a web interface to command-line applications.
 
 ## Context
 
-The 'ponyans' application's purpose is to allow a user at a web browser to execute arbitrary command-line
+The 'palvella' application's purpose is to allow a user at a web browser to execute arbitrary command-line
 applications and interact with them. The end result should be that any command-line application can have
 its own web interface, so that a custom web interface does not need to be written for it.
 

@@ -1,8 +1,8 @@
 
 import sqlite3
 
-from ponyans.lib.logging import logging as logging
-from ponyans.lib.db.base import DB
+from palvella.lib.logging import logging as logging
+from palvella.lib.db.base import DB
 
 type = "sqlite3"
 

@@ -4,9 +4,9 @@ services:
     build:
       context: .
       target: frontend-builder
-    container_name: ponyans-frontend
+    container_name: palvella-frontend
     volumes:
-      - ./ponyans:/app/ponyans
+      - ./palvella:/app/palvella
     environment:
       PORT: 8000
       DEBUG: 1

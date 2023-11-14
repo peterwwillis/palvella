@@ -1,7 +1,7 @@
 
 from ruamel.yaml import YAML
 
-from ponyans.lib.plugin_base import PluginClass
+from palvella.lib.plugin_base import PluginClass
 
 from .logging import logging
 from .db import DB
@@ -51,7 +51,7 @@ class Config(object):
 
 
 class Instance(PluginClass):
-    plugin_namespace = "ponyans.plugins.lib.instance"
+    plugin_namespace = "palvella.plugins.lib.instance"
 
     def __init__(self, **kwargs):
         logging.debug("Instance.__init__(%s)" % kwargs)

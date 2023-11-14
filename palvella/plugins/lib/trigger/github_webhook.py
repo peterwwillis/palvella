@@ -8,10 +8,10 @@ from typing import Any
 
 from starlette.responses import HTMLResponse, JSONResponse
 
-from ponyans.plugins.lib.frontend.fastapi import FastAPI, Request, Response, app
+from palvella.plugins.lib.frontend.fastapi import FastAPI, Request, Response, app
 
-from ponyans.lib.logging import logging as logging
-from ponyans.lib.trigger import Trigger
+from palvella.lib.logging import logging as logging
+from palvella.lib.trigger import Trigger
 
 type = "github_webhook"
 

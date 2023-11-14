@@ -1,6 +1,6 @@
 
-from ponyans.lib.logging import logging as logging
-from ponyans.lib.action.base import Action
+from palvella.lib.logging import logging as logging
+from palvella.lib.action.base import Action
 
 type = "run"
 
