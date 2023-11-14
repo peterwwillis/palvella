@@ -2,7 +2,7 @@
 import sqlite3
 
 from palvella.lib.logging import logging as logging
-from palvella.lib.db.base import DB
+from palvella.lib.db import DB
 
 type = "sqlite3"
 
@@ -70,5 +70,5 @@ class SQLite3DB(DB):
             )
 
 
-classref = SQLite3DB # Used by base class to load a new plugin class object
+classref = SQLite3DB  # Used by base class to load a new plugin class object
 logging.debug("Loaded plugin SQLite3DB()")
