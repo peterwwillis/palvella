@@ -4,7 +4,9 @@
 
 import six
 import hmac
-from typing import Any
+import hashlib
+import json
+# from typing import Any
 
 from starlette.responses import HTMLResponse, JSONResponse
 
@@ -14,6 +16,7 @@ from palvella.lib.logging import logging as logging
 from palvella.lib.trigger import Trigger
 
 type = "github_webhook"
+
 
 class GitHub_Webhook(Trigger):
     """ Class of the GitHub Webhook trigger.
@@ -41,10 +44,10 @@ class GitHub_Webhook(Trigger):
         except KeyError:
             JSONResponse('{"error": "Missing header: ' + key + '"}', status_code=400)
 
-    #def __init__(self, **extra: Any):
-    #    super().__init__(**extra)
-    #    #self.add_api_route("/", self.get_root, methods=["GET"], include_in_schema=False)
-    #    #self.add_api_route("/version", self.get_version, methods=["GET"])
+#    def __init__(self, **extra: Any):
+#        super().__init__(**extra)
+#        #self.add_api_route("/", self.get_root, methods=["GET"], include_in_schema=False)
+#        #self.add_api_route("/version", self.get_version, methods=["GET"])
 
     async def github_webhook(self, request: Request):
         digest = self.get_digest(request)
@@ -66,15 +69,15 @@ class GitHub_Webhook(Trigger):
         )
         if data is None:
             return JSONResponse({"error": "Request body must contain json"}, status_code=400)
-        self._logger.info("%s (%s)", _format_event(event_type, data), self.get_header(request, "X-Github-Delivery"))
-        # TODO: implement me
-        #for hook in self._hooks.get(event_type, []):
-        #    hook(data)
+        self._logger.info("%s (%s)", (event_type+":"+data), self.get_header(request, "X-Github-Delivery"))
+#        # TODO: implement me
+#        for hook in self._hooks.get(event_type, []):
+#            hook(data)
         return JSONResponse("", status_code=204)
 
 
-webhook = GitHub_Webhook() # Defines '/postreceive' endpoint
+webhook = GitHub_Webhook()  # Defines '/postreceive' endpoint
+
 
 async def plugin_init():
     app.add_api_route("/github_webhook", webhook.github_webhook, methods=["POST"])
-

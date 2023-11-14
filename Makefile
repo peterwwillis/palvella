@@ -1,4 +1,6 @@
 
+SRC_DIR := ./palvella
+
 help:
 	@echo "Make targets:"
 	@echo "    venv"
@@ -17,13 +19,13 @@ venv:
 
 test:
 	set -eu; . ./venv/bin/activate ; \
-	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics ; \
-	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics ; \
-	pytest
+	flake8 $(SRC_DIR) --color always --count --select=E9,F63,F7,F82 --show-source --statistics ; \
+	flake8 $(SRC_DIR) --color always --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics ; \
+	pytest $(SRC_DIR)
 
 run:
 	set -eu; . ./venv/bin/activate ; \
-	python app.py
+	DEBUG=1 python app.py
 
 compose-up:
 	docker compose build $(DOCKER_COMPOSE_BUILD_ARGS)

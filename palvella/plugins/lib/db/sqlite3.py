@@ -6,6 +6,7 @@ from palvella.lib.db.base import DB
 
 type = "sqlite3"
 
+
 class SQLite3DB(DB):
     """ Class of the SQLite3 database plugin.
         Inherits the DB class.
@@ -33,13 +34,13 @@ class SQLite3DB(DB):
         """
         logging.debug("SQLite3DB(%s)" % (kwargs))
         self.__dict__.update(kwargs)
-        self.conn = sqlite3.connect( self.db_path, check_same_thread=False )
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.cursor = self.conn.cursor()
         logging.debug("DB Connection established to {}".format(self.db_path))
         self.ensure_tables_exist()
 
     def table_exists(self, name):
-        """ Checks if a table exists in the database. 
+        """ Checks if a table exists in the database.
             Returns true if it does, false if it doesn't.
         """
         try:
@@ -48,11 +49,11 @@ class SQLite3DB(DB):
                 """SELECT count(1) FROM '%s' LIMIT 1;""" % (name)
             ).fetchall()
         except sqlite3.OperationalError as e:
-                message = e.args[0]
-                if message.startswith("no such "):
-                    return False
-                else:
-                    raise
+            message = e.args[0]
+            if message.startswith("no such "):
+                return False
+            else:
+                raise
         if len(tables) < 1:
             return False
         return True
@@ -67,6 +68,7 @@ class SQLite3DB(DB):
                         name TEXT
                     ) """
             )
+
 
 classref = SQLite3DB # Used by base class to load a new plugin class object
 logging.debug("Loaded plugin SQLite3DB()")

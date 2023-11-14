@@ -1,9 +1,10 @@
 
-import asyncio
-import sys
-import importlib, pkgutil
+import asyncio  # noqa: F401
+import importlib
+import pkgutil
 
 from .logging import logging
+
 
 def list_plugins(cls):
     """ Accepts a class, which needs an attribute 'plugin_namespace', whose value is a string
@@ -16,10 +17,11 @@ def list_plugins(cls):
         logging.debug("Found plugin '{}'".format(name))
         yield name, importlib.import_module(name)
 
+
 class PluginClass(object):
 
     def __init__(self, **kwargs):
-        logging.debug( "{}.__init__({})".format(self.__class__.__name__,kwargs) )
+        logging.debug("{}.__init__({})".format(self.__class__.__name__, kwargs))
         self.__dict__.update(kwargs)
         return
 
@@ -29,7 +31,7 @@ class PluginClass(object):
             with its own class (that inherits this class - or should, anyway).
             Otherwise return this class's object.
         """
-        logging.debug( "{}.init({})".format(cls.__class__.__name__,kwargs) )
+        logging.debug("{}.init({})".format(cls.__class__.__name__, kwargs))
 
         plugins = dict(list_plugins(cls))
 
@@ -44,7 +46,7 @@ class PluginClass(object):
                         )
                     )
                     return plugin_ref.classref(**kwargs)
-            raise Exception( "No such {} type '{}'".format(cls.__class__.__name__, kwargs['type']) )
+            raise Exception("No such {} type '{}'".format(cls.__class__.__name__, kwargs['type']))
 
     @classmethod
     async def load_plugins(cls, **kwargs):
@@ -63,4 +65,3 @@ class PluginClass(object):
                 logging.debug("Done loading plugin {}".format(plugin_name))
             else:
                 logging.debug("No attribute 'plugin_init' in plugin {}".format(plugin_name))
-

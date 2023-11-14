@@ -10,6 +10,7 @@ from .action import Action
 from .engine import Engine
 from .trigger import Trigger
 
+
 class Config(object):
 
     dbs = []
@@ -21,33 +22,32 @@ class Config(object):
         self.__dict__.update(kwargs)
 
     def load(self, file=None):
-        data = None
-        if file != None:
+        if file is not None:
             with open(file, "r") as f:
-                yaml=YAML(typ='safe')
+                yaml = YAML(typ='safe')
                 return self.parse(yaml.load(f))
 
     def parse(self, data):
 
         if 'db' in data:
-            assert( type(data['db']) == list ), "'db' value must be a list"
+            assert (data['db'] is list), "'db' value must be a list"
             for db in data['db']:
-                self.dbs.append( DB.init( **db ) )
+                self.dbs.append(DB.init(**db))
 
         if 'engine' in data:
-            assert( type(data['engine']) == list ), "'engine' value must be a list"
+            assert (data['engine'] is list), "'engine' value must be a list"
             for engine in data['engine']:
-                self.engines.append( Engine.init( **engine ) )
+                self.engines.append(Engine.init(**engine))
 
         if 'jobs' in data:
-            assert( type(data['jobs']) == list ), "'jobs' value must be a list"
+            assert (data['jobs'] is list), "'jobs' value must be a list"
             for job in data['jobs']:
-                self.jobs.append( Job.init( **job ) )
+                self.jobs.append(Job.init(**job))
 
         if 'triggers' in data:
-            assert( type(data['jobs']) == list ), "'jobs' value must be a list"
+            assert (data['jobs'] is list), "'jobs' value must be a list"
             for trigger in data['triggers']:
-                self.triggers.append( Trigger.init( **trigger ) )
+                self.triggers.append(Trigger.init(**trigger))
 
 
 class Instance(PluginClass):
@@ -57,4 +57,3 @@ class Instance(PluginClass):
         logging.debug("Instance.__init__(%s)" % kwargs)
         self.__dict__.update(kwargs)
         self.config = Config()
-
