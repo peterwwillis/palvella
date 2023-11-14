@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-set -eu; . ./venv/bin/activate
+set -eu; . ./.venv/bin/activate
 
 DEBUG=1 python app.py & pid=$!
 echo "pid $pid"
