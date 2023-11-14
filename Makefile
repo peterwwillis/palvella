@@ -6,12 +6,24 @@ help:
 	@echo "    compose-up"
 	@echo "    compose-down"
 
+all: venv test run
+
 venv:
-	[ -d venv ] || python3 -m venv ./venv
-	./venv/bin/pip3 install -r requirements.txt
+	[ -d venv ] || python3 -m venv ./venv ; \
+	set -eu; . ./venv/bin/activate ; \
+	python -m pip install --upgrade pip ; \
+	python -m pip install flake8 pytest ; \
+	python -m pip install -r requirements.txt
+
+test:
+	set -eu; . ./venv/bin/activate ; \
+	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics ; \
+	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics ; \
+	pytest
 
 run:
-	./venv/bin/python3 app.py
+	set -eu; . ./venv/bin/activate ; \
+	python app.py
 
 compose-up:
 	docker compose build $(DOCKER_COMPOSE_BUILD_ARGS)
