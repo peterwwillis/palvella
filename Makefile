@@ -19,3 +19,7 @@ compose-up:
 
 compose-down:
 	docker compose down
+
+clean:
+	rm -rf venv
+	find . -type d -name __pycache__ -exec rm -rf {} \; || true
