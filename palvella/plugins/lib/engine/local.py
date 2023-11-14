@@ -1,17 +1,22 @@
 
-from palvella.lib.engine.base import Engine
-from palvella.lib.logging import logging as logging
+"""The plugin for the Engine 'local'. Defines plugin class and some base functions."""
 
-type = "local"
+from palvella.lib.engine import Engine
+from palvella.lib.logging import logging
+
+TYPE = "local"
 
 
 class LocalEngine(Engine):
-    type = type
+    """
+    The 'LocalEngine' plugin class.
 
-    def __init__(self, **kwargs):
-        logging.debug("LocalEngine(%s)" % kwargs)
-        self.__dict__.update(kwargs)
+    Attributes:
+        TYPE: The name of the type of this Action plugin.
+    """
+
+    TYPE = TYPE
 
 
-classref = LocalEngine
+ClassRef = LocalEngine
 logging.debug("Loaded plugin LocalEngine()")

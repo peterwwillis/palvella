@@ -29,7 +29,6 @@ environ:
                           flake8-no-implicit-concat \
                           flake8-builtins \
                           flake8-docstrings \
-                          flake8-docstrings-complete \
                           flake8-fastapi \
                           flake8-bandit \
                           flake8-pylint \

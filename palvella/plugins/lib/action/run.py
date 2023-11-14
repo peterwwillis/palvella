@@ -1,17 +1,22 @@
 
-from palvella.lib.action import Action
-from palvella.lib.logging import logging as logging
+"""The plugin for the Action 'run'. Defines plugin class and some base functions."""
 
-type = "run"
+from palvella.lib.action import Action
+from palvella.lib.logging import logging
+
+TYPE = "run"
 
 
 class RunAction(Action):
-    type = type
+    """
+    The 'RunAction' plugin class.
 
-    def __init__(self, **kwargs):
-        logging.debug(f"RunAction({kwargs})")
-        self.__dict__.update(kwargs)
+    Attributes:
+        TYPE: The name of the type of this Action plugin.
+    """
+
+    TYPE = TYPE
 
 
-classref = RunAction
+ClassRef = RunAction
 logging.debug("Loaded plugin RunAction()")

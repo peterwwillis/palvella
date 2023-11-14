@@ -1,5 +1,6 @@
 
-import asyncio  # noqa: F401
+"""A module that defines a base class for plugins."""
+
 import importlib
 import pkgutil
 
@@ -7,52 +8,59 @@ from .logging import logging
 
 
 def list_plugins(cls):
-    """ Accepts a class, which needs an attribute 'plugin_namespace', whose value is a string
-        which is the name of a module to load. Loads that module and iterates over the namespace,
-        yielding the name of modules in said namespace.
     """
+    Generate a list of plugin names and namespaces.
+
+    Accepts a class, which needs an attribute 'plugin_namespace', whose value is a string
+    which is the name of a module to load. Loads that module and iterates over the namespace,
+    yielding the name of modules in said namespace.
+    """
+
     module = importlib.import_module(cls.plugin_namespace)
-    logging.debug("cls '{}', namespace '{}', module '{}'".format(cls, cls.plugin_namespace, module))
-    for finder, name, ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
-        logging.debug("Found plugin '{}'".format(name))
+    logging.debug(f"cls '{cls}', namespace '{cls.plugin_namespace}', module '{module}'")
+    for _finder, name, _ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
+        logging.debug(f"Found plugin '{name}'")
         yield name, importlib.import_module(name)
 
 
-class PluginClass(object):
+class PluginClass:
+    """The base class for plugins. Inherit this to make a new plugin class."""
 
     def __init__(self, **kwargs):
-        logging.debug("{}.__init__({})".format(self.__class__.__name__, kwargs))
+        """The __init__ method. Given a set of key=value pairs, update the object with those as attributes."""  # noqa
+
+        logging.debug(f"{self.__class__.__name__}.__init__({kwargs})")
         self.__dict__.update(kwargs)
-        return
 
     @classmethod
     def init(cls, **kwargs):
-        """ Look for a plugin for this object, and return a new object of that plugin
-            with its own class (that inherits this class - or should, anyway).
-            Otherwise return this class's object.
-        """
-        logging.debug("{}.init({})".format(cls.__class__.__name__, kwargs))
+        """Initialize a new object for a plugin of a given type and return it."""
 
+        logging.debug(f"{cls.__class__.__name__}.init({kwargs})")
         plugins = dict(list_plugins(cls))
 
         if 'type' in kwargs:
-            for plugin_name, plugin_ref in plugins.items():
+            for _plugin_name, plugin_ref in plugins.items():
                 if kwargs['type'] == plugin_ref.type:
                     logging.debug(
-                        "Found {} type '{}', returning object '{}'".format(
+                        "Found {} type '{}', returning object '{}'".format(  # noqa
                             cls.__class__.__name__,
                             plugin_ref.type,
                             plugin_ref
                         )
                     )
-                    return plugin_ref.classref(**kwargs)
-            raise Exception("No such {} type '{}'".format(cls.__class__.__name__, kwargs['type']))
+                    return plugin_ref.ClassRef(**kwargs)
+            raise ValueError(f"No such {cls.__class__.__name__} type '{kwargs['type']}'")
+        raise ValueError("No 'type' argument passed")
 
     @classmethod
     async def load_plugins(cls, **kwargs):
-        """ If this class has a variable 'plugin_namespace', search that namespace
-            for modules. If a module has the function 'plugin_init', run it, passing
-            any kwargs passed to us.
+        """
+        Run a function in a plugin after all plugins have been imported.
+
+        If the plugin's class has a variable 'plugin_namespace', search that namespace
+        for modules. If one of those modules has the function 'plugin_init', run it, passing
+        any kwargs passed to us.
         """
         logging.debug("load_plugins(): starting")
 
@@ -60,8 +68,8 @@ class PluginClass(object):
 
         for plugin_name, plugin_ref in plugins.items():
             if hasattr(plugin_ref, "plugin_init") and callable(plugin_ref.plugin_init):
-                logging.debug("Loading plugin {}".format(plugin_name))
+                logging.debug(f"Loading plugin {plugin_name}")
                 await plugin_ref.plugin_init(**kwargs)
-                logging.debug("Done loading plugin {}".format(plugin_name))
+                logging.debug(f"Done loading plugin {plugin_name}")
             else:
-                logging.debug("No attribute 'plugin_init' in plugin {}".format(plugin_name))
+                logging.debug(f"No attribute 'plugin_init' in plugin {plugin_name}")

@@ -1,4 +1,10 @@
 
+"""
+The logging library. Creates a default logger.
+
+If environment variable 'DEBUG' is true, sets logging level to DEBUG.
+"""
+
 import logging
 import os
 

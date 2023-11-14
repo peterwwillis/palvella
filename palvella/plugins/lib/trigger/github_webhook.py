@@ -2,6 +2,13 @@
 # due to that module being written for Flask.
 # That code is licensed here: https://github.com/bloomberg/python-github-webhook/blob/master/LICENSE
 
+"""
+The plugin for the Trigger 'github_webhook'. Defines plugin class and some base functions.
+
+This plugin registers a GitHub Webhook trigger '/github_webhook' using the FastAPI
+web server plugin.
+"""
+
 import hashlib
 import hmac
 import json
@@ -15,33 +22,24 @@ from palvella.plugins.lib.frontend.fastapi import Request, app
 # from typing import Any
 
 
-type = "github_webhook"
+TYPE = "github_webhook"
 
 
-class GitHub_Webhook(Trigger):
-    """ Class of the GitHub Webhook trigger.
-        Inherits the Trigger class.
-    """
+class GitHubWebhook(Trigger):
+    """Class of the GitHub Webhook trigger. Inherits the Trigger class."""
 
     _secret = None
-    type = type
-
-    def __init__(self, **kwargs):
-        """ When creating a new object, pass arbitrary key=value pairs to update the object.
-        """
-        super().__init__(**kwargs)
-        logging.debug(f"GitHub_Webhook({kwargs})")
-        self.__dict__.update(kwargs)
+    TYPE = TYPE
 
     async def get_digest(self, request):
-        """Return message digest if a secret key was provided"""
+        """Return message digest if a secret key was provided."""
         if self._secret:
             return hmac.new(self._secret, request.data, hashlib.sha1).hexdigest()
         return None
 
     @staticmethod
     def get_header(request, key):
-        """Return message header"""
+        """Return message header."""
         logging.debug(f"headers: '{request.headers}'")
         try:
             return request.headers.get(key)
@@ -54,6 +52,7 @@ class GitHub_Webhook(Trigger):
 #        #self.add_api_route("/version", self.get_version, methods=["GET"])
 
     async def github_webhook(self, request: Request):
+        """FastAPI route to handle /github_webhook endpoint."""  # noqa
         digest = await self.get_digest(request)
         if digest is not None:
             sig = self.get_header(request, "X-Hub-Signature")
@@ -75,14 +74,15 @@ class GitHub_Webhook(Trigger):
             return JSONResponse({"error": "Request body must contain json"}, status_code=400)
         logging.info("%s (%s)", (event_type+":"+data),
                      self.get_header(request, "X-Github-Delivery"))
-#        # TODO: implement me
+#        # TODO: implement me  # noqa
 #        for hook in self._hooks.get(event_type, []):
 #            hook(data)
         return JSONResponse("", status_code=204)
 
 
-webhook = GitHub_Webhook()  # Defines '/postreceive' endpoint
+webhook = GitHubWebhook()  # Defines '/postreceive' endpoint
 
 
 async def plugin_init():
+    """Add a route for the '/github_webhook' endpoint to the FastAPI plugin's web server."""
     app.add_api_route("/github_webhook", webhook.github_webhook, methods=["POST"])

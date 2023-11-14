@@ -7,7 +7,10 @@ from .logging import logging
 
 
 class Action(PluginClass):
+    """The 'Action' plugin class."""
+
     plugin_namespace = "palvella.plugins.lib.action"
 
     def run(self, **kwargs):
-        logging.debug("Action.run({})".format(kwargs))
+        """Run an action."""
+        logging.debug(f"Action.run({kwargs})")
