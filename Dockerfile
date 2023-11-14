@@ -4,6 +4,7 @@ FROM python:3.9 AS frontend-builder
 
 WORKDIR /app
 COPY requirements.txt ./
+
 RUN --mount=type=cache,target=/root/.cache/pip pip -v install -r requirements.txt
 
 COPY ./ /app/

@@ -34,13 +34,23 @@ run:
 	set -eu; . ./venv/bin/activate ; \
 	DEBUG=1 python app.py
 
-compose-up:
+test-e2e:
+	./test-e2e.sh
+
+#compose-test-e2e: compose-build compose-up
+#	set -eu; . ./venv/bin/activate ; \
+
+compose-build:
 	docker compose build $(DOCKER_COMPOSE_BUILD_ARGS)
-	docker compose up
+
+compose-up:
+	docker compose up -d
 
 compose-down:
 	docker compose down
 
 clean:
+	find . -type d -name __pycache__ -exec rm -rf {} \; 2>/dev/null || true
+
+clean-venv:
 	rm -rf venv
-	find . -type d -name __pycache__ -exec rm -rf {} \; || true
