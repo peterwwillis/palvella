@@ -14,7 +14,34 @@ environ:
 	[ -d .venv ] || python3 -m venv ./.venv ; \
 	set -eu; . ./.venv/bin/activate ; \
 	python -m pip install --upgrade pip ; \
-	python -m pip install flake8 pylint pytest ; \
+	python -m pip install flake8 \
+                          flake8-bugbear \
+                          flake8-pie \
+                          flake8-simplify \
+                          flake8-alfred \
+                          flake8-async \
+                          flake8-secure-coding-standard \
+                          flake8-unused-arguments \
+                          flake8-warnings \
+                          flake8-comprehensions \
+                          flake8-implicit-str-concat \
+                          flake8-forbidden-func \
+                          flake8-no-implicit-concat \
+                          flake8-builtins \
+                          flake8-docstrings \
+                          flake8-docstrings-complete \
+                          flake8-fastapi \
+                          flake8-bandit \
+                          flake8-pylint \
+                          flake8-isort \
+                          pep8-naming \
+                          pydoclint[flake8] \
+                          dlint \
+                          isort \
+                          pylint \
+                          pytest \
+                          sqlparse \
+                          ; \
 	python -m pip install -r requirements.txt
 
 lint:
@@ -23,8 +50,7 @@ lint:
 
 check:
 	set -eu; . ./.venv/bin/activate ; \
-	flake8 $(SRC_DIR) --color always --count --select=E9,F63,F7,F82 --show-source --statistics ; \
-	flake8 $(SRC_DIR) --color always --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics ; \
+	flake8 $(SRC_DIR) --color always --count --exit-zero --statistics --show-source --max-line-length=127
 
 test:
 	set -eu; . ./.venv/bin/activate ; \
