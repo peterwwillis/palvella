@@ -536,3 +536,30 @@ ignored-argument-names = "_.*|^ignored_|^unused_"
 redefining-builtins-modules = ["six.moves", "past.builtins", "future.builtins", "builtins", "io"]
 
 
+
+[tool.poetry]
+name = "palvella"
+version = "0.1.0"
+description = "A plugin-driven automation server in Python"
+authors = ["Peter Willis <31324861+peterwwillis@users.noreply.github.com>"]
+license = "GNU General Public License v3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+fastapi = "^0.104.1"
+flask = "^3.0.0"
+asgiref = "^3.7.2"
+flet = "^0.12.1"
+pywebio = "^1.8.3"
+pywebio-battery = "^0.5.1"
+uvicorn = "^0.24.0.post1"
+watchfiles = "^0.21.0"
+waitress = "^2.1.2"
+ruamel-yaml = ">0.18.0"
+python-multipart = "^0.0.6"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

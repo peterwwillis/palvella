@@ -4,14 +4,20 @@ SRC_DIR := ./palvella
 help:
 	@echo "Make targets:"
 	@echo "    environ"
+	@echo "    lint"
+	@echo "    check"
+	@echo "    test"
+	@echo "    test-e2e"
 	@echo "    run"
 	@echo "    compose-up"
 	@echo "    compose-down"
 
 all: environ check test run
 
+# Set up development environment
 environ:
-	[ -d .venv ] || python3 -m venv ./.venv ; \
+	poetry env use $(which python3)
+	poetry install
 	set -eu; . ./.venv/bin/activate ; \
 	python -m pip install --upgrade pip ; \
 	python -m pip install flake8 \
@@ -60,6 +66,7 @@ run:
 	DEBUG=1 python app.py
 
 test-e2e:
+	set -eu; . ./.venv/bin/activate ; \
 	./test-e2e.sh
 
 #compose-test-e2e: compose-build compose-up

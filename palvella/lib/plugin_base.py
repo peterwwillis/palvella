@@ -27,7 +27,7 @@ class PluginClass:
     """The base class for plugins. Inherit this to make a new plugin class."""
 
     def __init__(self, **kwargs):
-        """The __init__ method. Given a set of key=value pairs, update the object with those as attributes."""  # noqa
+        """Given a set of key=value pairs, update the object with those as attributes."""  # noqa
 
         logging.debug(f"{self.__class__.__name__}.__init__({kwargs})")
         self.__dict__.update(kwargs)
