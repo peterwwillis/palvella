@@ -11,9 +11,8 @@ web server plugin.
 
 import hashlib
 import hmac
-import json
-
 from http import HTTPStatus
+
 from starlette.responses import JSONResponse, Response
 
 from palvella.lib.logging import logging
@@ -41,7 +40,6 @@ class GitHubWebhook(Trigger):
     @staticmethod
     def get_header(request, key):
         """Return message header."""
-        #logging.debug(f"headers: '{request.headers}'")
         try:
             return request.headers.get(key)
         except KeyError:
@@ -69,12 +67,13 @@ class GitHubWebhook(Trigger):
                or not hmac.compare_digest(sig_parts[1], digest):
                 return JSONResponse({"error": "Invalid signature"}, status_code=400)
 
-        if content_type == "application/x-www-form-urlencoded":
+        if content_type == "application/x-www-form-urlencoded":  # noqa: PLR720
             form = await request.form()
             for k, v in form.multi_items():
                 logging.debug(f"k '{k}' v '{v}'")
-            # TODO: FIXME: this is broken; forms aren't coming back right!
-            data = json.loads(form.foobar)
+            # TODO: FIXME: this is broken; forms aren't coming back right!  # noqa
+            raise NotImplementedError
+            # data = json.loads(form.foobar)
         elif content_type == "application/json":
             data = await request.json()
 
