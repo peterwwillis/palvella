@@ -1,3 +1,3 @@
 # flake8: noqa: F401
-from .instance import Instance, Component
+from .instance import Component, Instance
 from .logging import logging

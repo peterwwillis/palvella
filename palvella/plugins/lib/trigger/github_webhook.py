@@ -15,8 +15,8 @@ from http import HTTPStatus
 
 from starlette.responses import JSONResponse, Response
 
-from palvella.lib.logging import logging
 from palvella.lib.instance.trigger import Trigger
+from palvella.lib.logging import logging
 from palvella.plugins.lib.frontend.fastapi import Request, app
 
 # from typing import Any

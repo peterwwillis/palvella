@@ -3,8 +3,9 @@
 
 from ruamel.yaml import YAML
 
-from ..logging import logging
 from palvella.lib.plugin_base import PluginClass
+
+from ..logging import logging
 
 
 class Instance(PluginClass):
