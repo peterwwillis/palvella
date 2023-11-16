@@ -3,7 +3,7 @@
 
 import sqlite3  # noqa
 
-from palvella.lib.db import DB
+from palvella.lib.instance.db import DB
 from palvella.lib.logging import logging
 
 TYPE = "sqlite3"

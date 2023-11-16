@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 
 import asyncio
-from palvella.lib import *
+
+from palvella.lib import Instance, Component, logging
+
 
 async def main():
-    await Frontend.load_plugins()
-    await Trigger.load_plugins()
+
+    await Component.load_plugins()
+    inst = Instance( config = "foo.yaml" )
+    logging.debug("done loading instance")
 
     # Infinite loop to wait for tasks to die and finally exit ourselves.
     # Without this, final task (this function) will not exit sanely on signals.
     while True:
         all_tasks = asyncio.all_tasks()
-        await asyncio.sleep(0.5)
         logging.debug("Tasks pending: '{}'".format(all_tasks))
+        await asyncio.sleep(0.5)
+
         cur_task = asyncio.current_task()
         excl_cur_task = (all_tasks - {cur_task})
         if len(excl_cur_task) < 1:

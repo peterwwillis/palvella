@@ -1,7 +1,7 @@
 
 """The plugin for the Action 'run'. Defines plugin class and some base functions."""
 
-from palvella.lib.action import Action
+from palvella.lib.instance.action import Action
 from palvella.lib.logging import logging
 
 TYPE = "run"

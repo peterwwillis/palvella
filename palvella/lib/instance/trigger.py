@@ -1,10 +1,10 @@
 
 """The library for triggers. Defines plugin class and some base functions."""
 
-from palvella.lib.plugin_base import PluginClass
+from palvella.lib.instance import Component
 
 
-class Trigger(PluginClass):
+class Trigger(Component):
     """
     The 'Trigger' plugin class.
 
@@ -13,3 +13,4 @@ class Trigger(PluginClass):
     """
 
     plugin_namespace = "palvella.plugins.lib.trigger"
+    config_namespace = "trigger"

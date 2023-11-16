@@ -7,9 +7,16 @@ engine:
     - name: "local"
       type: "local"
 
-jobs:
+job:
     - name: "Terraform plan-approve-apply pipeline"
-      engine: "local"
+      engine:
+        name: "local"
+      trigger:
+        name: "github_webhook"
+        repo:
+          name: "testing"
+          owner:
+            name: "octokitty"
       params:
         - name: "account"
           description: "The account to deploy Terraform in"

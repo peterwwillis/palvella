@@ -1,12 +1,12 @@
 
 """The library for jobs. Defines plugin class and some base functions."""
 
-from palvella.lib.plugin_base import PluginClass
+from palvella.lib.instance import Component
 
-from .logging import logging
+from ..logging import logging
 
 
-class Job(PluginClass):
+class Job(Component):
     """
     The 'Job' plugin class.
 
@@ -16,6 +16,7 @@ class Job(PluginClass):
     """
 
     plugin_namespace = "palvella.plugins.lib.job"
+    config_namespace = "job"
     actions = []
 
     def run(self, **kwargs):

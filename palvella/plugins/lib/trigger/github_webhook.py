@@ -16,7 +16,7 @@ from http import HTTPStatus
 from starlette.responses import JSONResponse, Response
 
 from palvella.lib.logging import logging
-from palvella.lib.trigger import Trigger
+from palvella.lib.instance.trigger import Trigger
 from palvella.plugins.lib.frontend.fastapi import Request, app
 
 # from typing import Any
@@ -44,11 +44,6 @@ class GitHubWebhook(Trigger):
             return request.headers.get(key)
         except KeyError:
             return JSONResponse('{"error": "Missing header: ' + key + '"}', status_code=400)
-
-#    def __init__(self, **extra: Any):
-#        super().__init__(**extra)
-#        #self.add_api_route("/", self.get_root, methods=["GET"], include_in_schema=False)
-#        #self.add_api_route("/version", self.get_version, methods=["GET"])
 
     async def github_webhook(self, request: Request):
         """FastAPI route to handle /github_webhook endpoint."""  # noqa

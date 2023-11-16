@@ -15,7 +15,9 @@ def list_plugins(cls):
     which is the name of a module to load. Loads that module and iterates over the namespace,
     yielding the name of modules in said namespace.
     """
-
+    logging.debug(f"list_plugins({cls})")
+    if not hasattr(cls, 'plugin_namespace'):
+        return
     module = importlib.import_module(cls.plugin_namespace)
     logging.debug(f"cls '{cls}', namespace '{cls.plugin_namespace}', module '{module}'")
     for _finder, name, _ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
@@ -32,6 +34,9 @@ class PluginClass:
         logging.debug(f"{self.__class__.__name__}.__init__({kwargs})")
         self.__dict__.update(kwargs)
 
+        plugins = dict(list_plugins(self.__class__))
+        logging.debug(f"plugins: {plugins}")
+
     @classmethod
     def init(cls, **kwargs):
         """Initialize a new object for a plugin of a given type and return it."""
@@ -41,11 +46,11 @@ class PluginClass:
 
         if 'type' in kwargs:
             for _plugin_name, plugin_ref in plugins.items():
-                if kwargs['type'] == plugin_ref.type:
+                if kwargs['type'] == plugin_ref.TYPE:
                     logging.debug(
                         "Found {} type '{}', returning object '{}'".format(  # noqa
                             cls.__class__.__name__,
-                            plugin_ref.type,
+                            plugin_ref.TYPE,
                             plugin_ref
                         )
                     )
@@ -62,14 +67,17 @@ class PluginClass:
         for modules. If one of those modules has the function 'plugin_init', run it, passing
         any kwargs passed to us.
         """
-        logging.debug("load_plugins(): starting")
+        logging.debug(f"load_plugins({cls})")
 
-        plugins = dict(list_plugins(cls))
+        subclasses = [inst for inst in cls.__subclasses__()]
+        for subclass in subclasses:
+            logging.debug(f"subclass '{subclass}'")
+            plugins = dict(list_plugins(subclass))
 
-        for plugin_name, plugin_ref in plugins.items():
-            if hasattr(plugin_ref, "plugin_init") and callable(plugin_ref.plugin_init):
-                logging.debug(f"Loading plugin {plugin_name}")
-                await plugin_ref.plugin_init(**kwargs)
-                logging.debug(f"Done loading plugin {plugin_name}")
-            else:
-                logging.debug(f"No attribute 'plugin_init' in plugin {plugin_name}")
+            for plugin_name, plugin_ref in plugins.items():
+                if hasattr(plugin_ref, "plugin_init") and callable(plugin_ref.plugin_init):
+                    logging.debug(f"Loading plugin {plugin_name}")
+                    await plugin_ref.plugin_init(**kwargs)
+                    logging.debug(f"Done loading plugin {plugin_name}")
+                else:
+                    logging.debug(f"No attribute 'plugin_init' in plugin {plugin_name}")

@@ -1,7 +1,7 @@
 
 """The plugin for the Engine 'local'. Defines plugin class and some base functions."""
 
-from palvella.lib.engine import Engine
+from palvella.lib.instance.engine import Engine
 from palvella.lib.logging import logging
 
 TYPE = "local"
