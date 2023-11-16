@@ -14,10 +14,13 @@ help:
 
 all: environ check test run
 
-# Set up development environment
-environ:
-	poetry env use $(which python3)
+
+poetry:
+	poetry env use $$(which python3)
 	poetry install
+
+# Set up development environment
+environ: poetry
 	set -eu; . ./.venv/bin/activate ; \
 	python -m pip install --upgrade pip ; \
 	python -m pip install flake8 \
@@ -45,9 +48,10 @@ environ:
                           isort \
                           pylint \
                           pytest \
-                          sqlparse \
-                          ; \
-	python -m pip install -r requirements.txt
+                          sqlparse
+
+isort:
+	isort $(SRC_DIR)
 
 lint:
 	set -eu; . ./.venv/bin/activate ; \
