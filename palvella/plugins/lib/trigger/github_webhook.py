@@ -13,7 +13,8 @@ import hashlib
 import hmac
 import json
 
-from starlette.responses import JSONResponse
+from http import HTTPStatus
+from starlette.responses import JSONResponse, Response
 
 from palvella.lib.logging import logging
 from palvella.lib.trigger import Trigger
@@ -40,7 +41,7 @@ class GitHubWebhook(Trigger):
     @staticmethod
     def get_header(request, key):
         """Return message header."""
-        logging.debug(f"headers: '{request.headers}'")
+        #logging.debug(f"headers: '{request.headers}'")
         try:
             return request.headers.get(key)
         except KeyError:
@@ -53,9 +54,14 @@ class GitHubWebhook(Trigger):
 
     async def github_webhook(self, request: Request):
         """FastAPI route to handle /github_webhook endpoint."""  # noqa
+
+        sig = self.get_header(request, "X-Hub-Signature")
+        delivery = self.get_header(request, "X-Github-Delivery")
+        event_type = self.get_header(request, "X-Github-Event")
+        content_type = self.get_header(request, "content-type")
+
         digest = await self.get_digest(request)
         if digest is not None:
-            sig = self.get_header(request, "X-Hub-Signature")
             logging.debug(f"sig: '{sig}'")
             sig_parts = sig.split("=", 1)
             logging.debug(f"sig_parts '{sig_parts}' digest '{digest}'")
@@ -63,21 +69,28 @@ class GitHubWebhook(Trigger):
                or not hmac.compare_digest(sig_parts[1], digest):
                 return JSONResponse({"error": "Invalid signature"}, status_code=400)
 
-        event_type = self.get_header(request, "X-Github-Event")
-        content_type = self.get_header(request, "content-type")
-        data = (
-            json.loads(request.form.to_dict(flat=True)["payload"])
-            if content_type == "application/x-www-form-urlencoded"
-            else request.get_json()
-        )
+        if content_type == "application/x-www-form-urlencoded":
+            form = await request.form()
+            for k, v in form.multi_items():
+                logging.debug(f"k '{k}' v '{v}'")
+            # TODO: FIXME: this is broken; forms aren't coming back right!
+            data = json.loads(form.foobar)
+        elif content_type == "application/json":
+            data = await request.json()
+
         if data is None:
             return JSONResponse({"error": "Request body must contain json"}, status_code=400)
-        logging.info("%s (%s)", (event_type+":"+data),
-                     self.get_header(request, "X-Github-Delivery"))
+
+        logging.info(f"event_type:{event_type} data:{data} ({delivery})")
+
 #        # TODO: implement me  # noqa
 #        for hook in self._hooks.get(event_type, []):
 #            hook(data)
-        return JSONResponse("", status_code=204)
+        # For 204 status code, you *MUST NOT* use a JSONResponse or HTTPResponse,
+        # but only Response, with no body. Otherwise FastAPI will inject some junk
+        # in the body that causes the h11 library to throw exceptions, because for
+        # 204 there should be no body at all.
+        return Response(status_code=HTTPStatus.NO_CONTENT.value)
 
 
 webhook = GitHubWebhook()  # Defines '/postreceive' endpoint
