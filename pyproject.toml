@@ -558,6 +558,7 @@ watchfiles = "^0.21.0"
 waitress = "^2.1.2"
 ruamel-yaml = ">0.18.0"
 python-multipart = "^0.0.6"
+hypercorn = "^0.15.0"
 
 
 [build-system]
