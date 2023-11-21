@@ -41,7 +41,7 @@ async def start_hypercorn():
     asyncio.create_task(hyperserve(app, config))
 
 
-async def plugin_init():
+async def instance_init(**kwargs):
     """Run the web server after all Palvalla plugins have been imported."""
     if ASGI_SERVER_TYPE == "hypercorn":
         await start_hypercorn()

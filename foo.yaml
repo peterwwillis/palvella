@@ -1,4 +1,9 @@
 
+mq:
+    - name: "zeromq-trigger"
+      queue: "trigger"
+      type: "zeromq"
+
 db:
     - name: "sqlite"
       type: "sqlite3"
@@ -9,14 +14,17 @@ engine:
 
 job:
     - name: "Terraform plan-approve-apply pipeline"
+
       engine:
         name: "local"
+
       trigger:
         name: "github_webhook"
         repo:
           name: "testing"
           owner:
             name: "octokitty"
+
       params:
         - name: "account"
           description: "The account to deploy Terraform in"

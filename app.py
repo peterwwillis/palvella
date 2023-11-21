@@ -2,13 +2,13 @@
 
 import asyncio
 
-from palvella.lib import Instance, Component, logging
+from palvella.lib import Instance, logging
 
 
 async def main():
 
-    await Component.load_plugins()
     inst = Instance( config = "foo.yaml" )
+    await inst.initialize()
     logging.debug("done loading instance")
 
     # Infinite loop to wait for tasks to die and finally exit ourselves.

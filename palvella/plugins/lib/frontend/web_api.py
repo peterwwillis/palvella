@@ -18,7 +18,7 @@ async def hello():
     return {"message": "Hello World from the web_api plugin"}
 
 
-async def plugin_init():
+async def instance_init(**kwargs):
     """Add a router to this web API to the FastAPI app."""
     logging.debug("Including web_api router in FastAPI app")
     app.include_router(web_api)

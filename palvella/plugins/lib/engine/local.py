@@ -16,7 +16,3 @@ class LocalEngine(Engine):
     """
 
     TYPE = TYPE
-
-
-ClassRef = LocalEngine
-logging.debug("Loaded plugin LocalEngine()")

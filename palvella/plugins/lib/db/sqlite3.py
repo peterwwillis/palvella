@@ -62,14 +62,10 @@ class SQLite3DB(DB):
 
     def ensure_tables_exist(self):
         """If database tables do not exist in the database yet, create them."""
-        if not self.table_exists("jobs"):
+        if not self.table_exists("jobs_pending"):
             self.cursor.execute(
-                """ CREATE TABLE jobs(
+                """ CREATE TABLE jobs_pending(
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name TEXT
                     ) """
             )
-
-
-ClassRef = SQLite3DB  # Used by base class to load a new plugin class object
-logging.debug("Loaded plugin SQLite3DB()")

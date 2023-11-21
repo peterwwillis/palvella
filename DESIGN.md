@@ -1,14 +1,17 @@
-# Design
+# Design of Palvella
 
+---
 ## About
 
-This document describes the design of the program 'palvella', a web interface to command-line applications.
+This document describes the design of the program 'palvella', a plugin-driven automation server.
 
+---
 ## Context
 
 The 'palvella' application's purpose is to allow a user at a web browser to execute arbitrary command-line
 applications and interact with them. The end result should be that any command-line application can have
-its own web interface, so that a custom web interface does not need to be written for it.
+its own web interface, so that a custom web interface does not need to be written for it. In addition,
+new pipelines of tasks can be created, also with a custom web interface.
 
 Simply executing a command-line program and printing its output doesn't provide a lot of value for the
 user. To make the output more useful, a few extra features should be implemented:
@@ -17,6 +20,7 @@ user. To make the output more useful, a few extra features should be implemented
  - Allow command-line programs to output a format which can be converted into browser-friendly
    prompts, to make use of browser-based widgets and input methods.
 
+---
 ## Design Goals
 
 ### Usage
@@ -32,7 +36,7 @@ out and standard error file descriptors.
 The program's core functionality will be exposed as a library so it can be loaded by other applications
 and used for whatever purpose seems fitting.
 
-#### Usage: Use Cases
+### Use Cases
 
 #### 1. CI platform
 
@@ -170,7 +174,7 @@ Aspects of the pipeline needed:
 
 
 ---
-### Plugins
+## Plugins
 
 The program should use plugins to add functionality, and those plugins should be able to be installed
 from a location other than the official codebase.
@@ -183,7 +187,7 @@ or having a certain license.
 Additional private registries should be able to be added in order to completely self-host the
 program while still providing the same meaningful functionality.
 
-#### Plugins: Categories
+### Plugins: Categories
 
 Certain core functionality of the application should expose hooks so that plugins can hook into
 that functionality.
@@ -202,7 +206,7 @@ Categories:
 
 
 ---
-##### Plugins: Category: Authentication
+#### Plugins: Category: Authentication
 
 Authentication plugins provide a means to establish the authenticity of a request.
 
@@ -210,7 +214,7 @@ The plugin is configured so that it can request authentication status for a part
 Once the request comes back successfully, a new Authentication item is created for that identity,
 which can then be used with Authorization and Permission to validate a request.
 
-###### Plugins: Category: Authentication: Parameters
+##### Plugins: Category: Authentication: Parameters
 An Authentication exposes a set of methods used to determine authorization status:
  - `host`: A host to connect to in order to request authentication.
 
@@ -225,7 +229,7 @@ Identity:
 
 
 ---
-##### Plugins: Category: Authorization
+#### Plugins: Category: Authorization
 
 Authorization plugins provide a means to determine if a component of the system is authorized
 to perform a particular function. For example, if a *Credential* is configured for a specific
@@ -241,12 +245,12 @@ Authorization Role properties:
 
 
 ---
-##### Plugins: Category: Permission
+#### Plugins: Category: Permission
 
 Permission plugins provide a mapping between components of the system and what those components
 are allowed or not allowed to have access to.
 
-###### Plugins: Category: Permission: object(Permission)
+##### Plugins: Category: Permission: object(Permission)
 Permission plugins expose Permissions, which are named objects that define a group of permission
 properties. Each Permission may have the following properties:
  - `identity` - The name of the authenticated identity which is requesting access. (example:
@@ -262,7 +266,7 @@ properties. Each Permission may have the following properties:
 
 
 ---
-##### Plugins: Category: Credential
+#### Plugins: Category: Credential
 
 Credentials are objects which the app uses to provide authentication and authorization
 information to different aspects of the system. They can be used to store and retrieve
@@ -276,14 +280,14 @@ To use a Credential in configuration, you can use an object as a value for some
 configuration option. The object should be like the following:
   - `from_credential`: Specifies that the value should come from the given Credential.
 
-###### Plugins: Category: Credential: Methods
+##### Plugins: Category: Credential: Methods
 A Credential plugin uses a set of methods to access data. Example methods:
  - `add`
  - `remove`
  - `set_property`
  - `get_property`
 
-###### Plugins: Category: Credential: Parameters
+##### Plugins: Category: Credential: Parameters
 A Credential uses parameters to define how it can be used. Example properties:
  - `name`: The name of the credential. Must be unique.
  - `type`: The type of the credential. (examples: "UsermameAndPassword",
@@ -293,13 +297,13 @@ A Credential uses parameters to define how it can be used. Example properties:
 
 
 ---
-##### Plugins: Category: Database
+#### Plugins: Category: Database
 
 Databases are the basic unit of storage of data that the app needs to operate.
 It stores configuration about the app, as well as the state of Jobs within the
 app, and any other configuration or state necessary for the app to run.
 
-###### Plugins: Category: Database: Methods
+##### Plugins: Category: Database: Methods
 A Database plugin uses a set of methods to query the database. Example methods:
  - `add`
  - `remove`
@@ -310,7 +314,7 @@ A Database plugin uses a set of methods to query the database. Example methods:
 
 
 ---
-##### Plugins: Category: Job
+#### Plugins: Category: Job
 
 Jobs are the basic unit of work for the app. They perform logic on a set of data
 and determine the progress of the application.
@@ -323,7 +327,7 @@ Jobs run Actions. Actions store their state within the logical unit of a Job.
 
 Jobs can specify a dependency on another Job.
 
-###### Plugins: Category: Job: Parameters
+##### Plugins: Category: Job: Parameters
 Jobs can take parameters:
  - `name`: The name of the Job.
  - `engine`: The Engine to use for execution of Actions.
@@ -336,7 +340,7 @@ Jobs can take parameters:
     - `type`: The type of parameter (list, object, string, boolean)
     - `default`: The default value for this parameter.
 
-###### Plugins: Category: Job: Methods
+##### Plugins: Category: Job: Methods
 A Job plugin uses a set of methods to interact with the Job and its Acions.
 Example methods:
  - `add`
@@ -349,7 +353,7 @@ Example methods:
 
 
 ---
-##### Plugins: Category: Action
+#### Plugins: Category: Action
 
 Actions are the basic unit of logic executed by a Job. They perform computation
 on some data, and return a status, as well as optional output.
@@ -360,7 +364,7 @@ of actions.
 Actions inherit certain configuration from Jobs:
  - `engine`: The engine to use for execution of the Action.
 
-###### Plugins: Category: Action: Parameters
+##### Plugins: Category: Action: Parameters
 Actions can take parameters:
  - `name`: The name of the Action.
  - `type`: The type of the Action. These will be inferred in the Action if there
@@ -370,18 +374,18 @@ Actions can specify a dependency on another Step.
 
 Actions can be of a couple different types:
 
-###### Plugins: Category: Action: Type: `run`
+##### Plugins: Category: Action: Type: `run`
 The `run` action is configurable through a couple of different key/value options:
  - `shell`: The command and arguments used to run the shell.
  - `command`: A string which is to be executed in the shell.
  - `engine`: The *Engine* used to run commands. This can either specify an
              already configured *Engine*, or you can configure one in-line.
 
-###### Plugins: Category: Action: Type: `approval`
+##### Plugins: Category: Action: Type: `approval`
 The `approval` action will pause the Job until an approval is given.
 
 
-###### Plugins: Category: Action: Methods
+##### Plugins: Category: Action: Methods
 An Action plugin uses a set of methods to perform its function. Example methods:
  - `action_add`
  - `action_remove`
@@ -393,7 +397,7 @@ An Action plugin uses a set of methods to perform its function. Example methods:
 
 
 ---
-##### Plugins: Category: Engine
+#### Plugins: Category: Engine
 
 Engines are the method by which logic is executed.
 They are used to execute Actions within Jobs.
@@ -409,12 +413,12 @@ Action or a Job is called a "Worker" (the same difference between a compiled
 executable file, and a running process).
 
 
-###### Plugins: Category: Engine: Parameters
+##### Plugins: Category: Engine: Parameters
 Each engine takes parameters to configure it:
  - `name`: The name of the Engine.
  - `type`: The name of the 'type' of the Engine.
 
-###### Plugins: Category: Engine: Type: `local`
+##### Plugins: Category: Engine: Type: `local`
 The `local` engine runs commands in a shell on the same host that the *Worker* is
 running in.
 
@@ -422,7 +426,7 @@ Parameters for this *Engine*:
  - `shell`: The shell to use to execute commands.
  - `environ`: An object of environment variables to set at execution time.
 
-###### Plugins: Category: Engine: Type: `docker`
+##### Plugins: Category: Engine: Type: `docker`
 The `docker` engine runs commands in a Docker container.
 
 Parameters for this *Engine*:
@@ -453,7 +457,7 @@ Parameters for this *Engine*:
                     `$HOME/.docker/config.json` file as a Docker [Credential Helper](https://docs.docker.com/engine/reference/commandline/login/#credential-helpers).
                     
 
-###### Plugins: Category: Engine: Platforms
+##### Plugins: Category: Engine: Platforms
 An Engine implements execution of logic within a "Platform". Sample platforms
 include:
  - Native (execution of code within the app itself)
@@ -463,7 +467,7 @@ include:
  - Kubernetes
  - AWS ECS
 
-###### Plugins: Category: Engine: Methods
+##### Plugins: Category: Engine: Methods
 An Engine uses a set of methods to perform its functions. Example methods:
  - `engine_add`
  - `engine_init`
@@ -471,4 +475,50 @@ An Engine uses a set of methods to perform its functions. Example methods:
  - `engine_set_property`
  - `engine_get_property`
 
+
+---
+## Operation
+
+### How jobs run
+
+#### Triggers
+
+Triggers enqueue messages in the Trigger MQ (Message Queue).
+
+Triggers may communicate through a REST API built into this server.
+
+##### 1.1 Initial trigger
+When a trigger is triggered, it records itself in the Trigger MQ and exits.
+
+##### 1.2. Trigger processing
+A service picks up new items from the Trigger MQ and does the following:
+1. Check if any existing jobs are looking for its trigger. If not, the trigger is concluded and dropped.
+2. Record itself in the database as having triggered, so it can be looked up later.
+3. Enqueue new runs of any jobs that registered this trigger. As input to the jobs, include a reference to the trigger record in the database.
+
+#### 2. Jobs
+
+##### 2.1. Workers
+For a job to run, a Worker instance of the server must be running.
+
+That Worker is designed to run jobs based on a set of criteria specific to that Worker,
+such as Platform, Operating System, CPU architecture, and more. By default, any Worker
+will attempt to run any job.
+
+The Worker will receive updates when an event happens it needs to know about, such as
+there being a new job in a queue that needs executing.
+
+If the job matches the configuration of the Worker, the Worker will begin executing the
+job and return back an answer that it has picked up the job.
+
+When the job is complete, the Worker will store its status and attempt to provide it to
+the party that informed it to run the job. The Worker can also respond to queries about
+the current state of the job for as long as it keeps that state information around.
+
+##### 2.2. Dependencies
+
+Jobs can depend on other jobs, or wait for jobs or actions to finish.
+Because of this, a job's execution will only progress if a set of criteria allow it to.
+Once a job is done executing, its updated status can (& will) be used to determine the
+criteria for future jobs.
 

@@ -16,7 +16,3 @@ class RunAction(Action):
     """
 
     TYPE = TYPE
-
-
-ClassRef = RunAction
-logging.debug("Loaded plugin RunAction()")

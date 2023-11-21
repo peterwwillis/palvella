@@ -1,10 +1,10 @@
 
 """The library for databases. Defines plugin class and some base functions."""
 
-from palvella.lib.instance import Component
+from palvella.lib.instance import Instance
 
 
-class DB(Component):
+class DB(Instance):
     """The 'DB' plugin class."""
 
     plugin_namespace = "palvella.plugins.lib.db"
