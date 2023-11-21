@@ -1,8 +1,8 @@
 
 """The library for message queues. Defines plugin class and some base functions."""
 
-from palvella.lib.logging import logging
 from palvella.lib.instance import Instance
+from palvella.lib.logging import logging
 
 
 class MessageQueue(Instance):

@@ -1,8 +1,8 @@
 
 """The library for triggers. Defines plugin class and some base functions."""
 
-from palvella.lib.logging import logging
 from palvella.lib.instance import Instance
+from palvella.lib.logging import logging
 
 
 class Trigger(Instance):

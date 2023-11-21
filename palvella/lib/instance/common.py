@@ -3,8 +3,10 @@
 
 from ruamel.yaml import YAML
 
-from ..logging import logging
 from palvella.lib.plugin_base import PluginClass
+
+from ..logging import logging
+
 
 class Instance(PluginClass):
     """The 'Instance' plugin class. Creates a new instance of the application.
