@@ -75,6 +75,8 @@ class GitHubWebhook(Trigger):
 
         logging.info(f"event_type:{event_type} data:{data} ({delivery})")
 
+        # MessageQueue: Publish this message to the message queue as specified in
+        #               the configuration for this webhook.
         await self.publish(
             event_type=event_type, hook_id=hook_id, delivery=delivery, data=data
         )

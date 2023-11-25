@@ -19,7 +19,6 @@ def list_plugins(cls):
     if not hasattr(cls, 'plugin_namespace'):
         return
     module = importlib.import_module(cls.plugin_namespace)
-    #logging.debug(f"cls '{cls}', namespace '{cls.plugin_namespace}', module '{module}'")
     for _finder, name, _ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
         logging.debug(f"Found plugin '{name}'")
         yield name, importlib.import_module(name)
@@ -34,7 +33,7 @@ class PluginClass:
         logging.debug(f"{self.__class__.__name__}.__init__({kwargs})")
         self.__dict__.update(kwargs)
 
-    async def run_plugins(self, function=None, **kwargs):
+    async def run_plugin_function(self, function=None, **kwargs):
         """
         Run a function in all plugins that are subclassed from this class.
 
@@ -48,7 +47,7 @@ class PluginClass:
         Otherwise, looks up all plugins that are subclasses of the current class.
         For each, look up function name and call it, passing \*\*kwargs.
         """
-        logging.debug(f"run_plugins({self}, {kwargs})")
+        logging.debug(f"run_plugin_function({self}, {kwargs})")
 
         components = []
         for subclass in self.__class__.__subclasses__():

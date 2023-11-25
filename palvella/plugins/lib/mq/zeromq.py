@@ -1,7 +1,9 @@
 
 """The plugin for the Message Queue 'zeromq'. Defines plugin class and some base functions."""
 
+import json
 import zmq
+import zmq.asyncio
 
 from palvella.lib.instance.mq import MessageQueue
 from palvella.lib.logging import logging
@@ -19,6 +21,18 @@ class ZeroMQ(MessageQueue):
 
     TYPE = TYPE
 
+    async def publish(self, *, queue, **kwargs):
+        """Publish a dict (kwargs) to the message queue as a JSON document."""
+        newdict = {"queue":queue} + kwargs
+        self.sock.send(json.dumps(newdict))
+
+    async def consume(self, *, queue, **kwargs):
+        """Consume a message from a queue."""
+
     async def instance_init(self, **kwargs):
+        self.context = zmq.asyncio.Context()
+        # Create a 
+        self.sock = self.context.socket(zmq.PUB)
+        self.sock.bind(self.url)
+
         self.instance.mq = self
-        logging.debug(f"ZeroMQ instance {self.instance} mq {self.instance.mq}")

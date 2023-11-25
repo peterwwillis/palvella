@@ -1,8 +1,15 @@
 
+trigger:
+    - name: "GitHub webhook"
+      type: "github_webhook"
+      mq: "0mq-trigger-ghwh"
+
 mq:
-    - name: "zeromq-trigger"
-      queue: "trigger"
+    - name: "0mq-trigger-ghwh"
       type: "zeromq"
+      queue: "0mq-trigger-ghwh"
+      socket_type: "pubsub"
+      url: "tcp://127.0.0.1:5680"
 
 db:
     - name: "sqlite"

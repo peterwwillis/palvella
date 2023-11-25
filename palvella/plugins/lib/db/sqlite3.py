@@ -14,15 +14,15 @@ class SQLite3DB(DB):
     Class of the SQLite3 database plugin. Inherits the DB class.
 
     Attributes of this class:
-        'type'      - The name of the type of this database.
-        'conn'      - The handle of a live connection to the database.
-        'cursor'    - The SQLite3 cursor (from 'conn')
-        'db_path'   - The default file path to the default SQLite3 database.
+        type            - The name of the type of this database.
+        conn            - The handle of a live connection to the database.
+        cursor          - The SQLite3 cursor (from 'conn')
     """
 
     TYPE = TYPE
     conn = None
     cursor = None
+    config_data_defaults = ["db_path"]
     db_path = "db.sqlite3"
 
     def __init__(self, **kwargs):
@@ -34,12 +34,17 @@ class SQLite3DB(DB):
         exist.
 
         Attributes:
+          config_data:
             db_path:    - A file path to an SQlite3 database file. If not passed,
                           the default variable 'db_path' in the class is used.
         """
 
         logging.debug(f"SQLite3DB({kwargs})")
         super().__init__(**kwargs)
+        self.connect()
+
+    def connect(self):
+        """Establish a connection to the SQLite3 database."""
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.cursor = self.conn.cursor()
         logging.debug(f"DB Connection established to {self.db_path}")

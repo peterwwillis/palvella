@@ -1,6 +1,9 @@
 
 SRC_DIR := ./palvella
 
+PYTHONDONTWRITEBYTECODE = 1
+export PYTHONDONTWRITEBYTECODE
+
 help:
 	@echo "Make targets:"
 	@echo "    environ"

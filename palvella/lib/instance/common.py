@@ -18,23 +18,39 @@ class Instance(PluginClass):
 
     #plugin_namespace = "palvella.plugins.lib.instance"
 
+    config_data_defaults = None
+    config_data = {}
+
     def __init__(self, **kwargs):
         """
         Initialize the new object.
 
         Arguments:
             config: The name of a YAML configuration to load and parse. Created object becomes '_config' attribute.
+
         """
         super().__init__(**kwargs)
 
+        """
+        If 'config_data' was set (from Config.parse) and 'config_data_defaults' was set (in the
+        class that's inheriting this class), look in the attributes of the inheriting class for
+        a default attribute of the same name, and fill in 'config_data' with its value.
+        """
+        if hasattr(self, 'config_data_defaults') and self.config_data_defaults is not None:
+            for k in self.config_data_defaults:
+                if not k in self.config_data:
+                    self.config_data[k] = getattr(self, k)
+
         # Other classes will inherit this function, but we don't want this logic
-        # happening anywhere else
-        if self.__class__ is "Instance" and 'config' in kwargs:
-            self._config = Config(instance=self, load=kwargs['config'])
+        # happening anywhere else.
+        if self.__class__.__name__ == "Instance":
+            if 'config' in kwargs:
+                self._config = Config(instance=self, load=kwargs['config'])
 
     async def initialize(self):
-        self.instance = self
-        self.components = await self.run_plugins(function="instance_init")
+        self._instance = self
+        logging.debug(f"self.__dict__ -> {self.__dict__}")
+        self.components = await self.run_plugin_function(function="instance_init")
 
 
 class Config(Instance):
@@ -50,7 +66,8 @@ class Config(Instance):
         logging.debug(f"Config({kwargs})")
         self.__dict__.update(kwargs)
 
-        assert ('instance' in kwargs), f"new Config() object must have instance= passed to it"
+        assert ('instance' in kwargs), f"new Config() object must have instance attribute passed to it"
+        assert (kwargs['instance'].__class__.__name__ == "Instance"), f"new Config() object's instance attribute must be of type Instance"
 
         if 'load' in kwargs:
             self.loadYamlFile(file=kwargs['load'])
@@ -81,6 +98,7 @@ class Config(Instance):
         of a 'config_namespace', and whose value is an array of objects.
         """
 
+        logging.debug("Config.parse()")
         # Instance objects are subclasses of 'Instance' class.
         subclasses = [cls for cls in Instance.__subclasses__()]
         for rootkey, rootval in data.items():
@@ -94,4 +112,5 @@ class Config(Instance):
                     if not rootkey in self.__dict__:
                         self.__dict__[rootkey] = []
                     for val in rootval:
-                        self.__dict__[rootkey].append(subclass(instance=self.instance, **val))
+                        logging.debug(f"Appending new object to self.[{rootkey}]: {subclass.__name__}(instance=self.instance, {val})")
+                        self.__dict__[rootkey].append(subclass(instance=self.instance, config_data=val))
