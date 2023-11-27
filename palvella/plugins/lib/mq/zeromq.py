@@ -21,6 +21,12 @@ class ZeroMQ(MessageQueue):
 
     TYPE = TYPE
 
+    def __pre_plugins__(self):
+        self.context = zmq.asyncio.Context()
+        self.sock = self.context.socket(zmq.PUB)
+        self.sock.bind(self.url)
+        self.parent.mq = self
+
     async def publish(self, *, queue, **kwargs):
         """Publish a dict (kwargs) to the message queue as a JSON document."""
         newdict = {"queue":queue} + kwargs
@@ -28,11 +34,3 @@ class ZeroMQ(MessageQueue):
 
     async def consume(self, *, queue, **kwargs):
         """Consume a message from a queue."""
-
-    async def instance_init(self, **kwargs):
-        self.context = zmq.asyncio.Context()
-        # Create a 
-        self.sock = self.context.socket(zmq.PUB)
-        self.sock.bind(self.url)
-
-        self.instance.mq = self

@@ -3,58 +3,65 @@
 
 from ruamel.yaml import YAML
 
-from palvella.lib.plugin_base import PluginClass
+from palvella.lib.plugin import Plugin
 
 from ..logging import logging
 
 
-class Instance(PluginClass):
+class Instance(Plugin):
     """The 'Instance' plugin class. Creates a new instance of the application.
 
     Attributes:
         plugin_namespace: The namespace for this plugin module.
-        _config:           A new Config() object created by __init__.
+        _config:           A new Config() object created by configure().
     """
 
-    #plugin_namespace = "palvella.plugins.lib.instance"
+    plugin_namespace = "palvella.lib.instance"
+    #config_namespace = "instance"
 
     config_data_defaults = None
     config_data = {}
+    _pre_plugins_ref_name = "__pre_plugins__"
 
     def __init__(self, **kwargs):
         """
         Initialize the new object.
 
         Arguments:
-            config: The name of a YAML configuration to load and parse. Created object becomes '_config' attribute.
-
+            config_data: A dict of key=value pairs loaded from Config.parse().
+            config_data_defaults: A dict of default values to fill in config_data with.
         """
+
         super().__init__(**kwargs)
 
-        """
-        If 'config_data' was set (from Config.parse) and 'config_data_defaults' was set (in the
-        class that's inheriting this class), look in the attributes of the inheriting class for
-        a default attribute of the same name, and fill in 'config_data' with its value.
-        """
         if hasattr(self, 'config_data_defaults') and self.config_data_defaults is not None:
-            for k in self.config_data_defaults:
+            for k, v in self.config_data_defaults.items():
                 if not k in self.config_data:
-                    self.config_data[k] = getattr(self, k)
+                    self.config_data[k] = v
 
-        # Other classes will inherit this function, but we don't want this logic
-        # happening anywhere else.
-        if self.__class__.__name__ == "Instance":
-            if 'config' in kwargs:
-                self._config = Config(instance=self, load=kwargs['config'])
+        # Run a function *before* loading the plugins below. This allows inheriting classes to initialize
+        # the object prior to loading more child plugins, so the child plugins can use the initialized
+        # object.
+        if self._pre_plugins_ref_name != None and hasattr(self, self._pre_plugins_ref_name):
+            if callable(getattr(self, self._pre_plugins_ref_name)):
+                getattr(self, self._pre_plugins_ref_name)()
+
+        logging.debug("running self.load_plugins")
+        self.load_plugins(create_objs=False)
 
     async def initialize(self):
-        self._instance = self
-        logging.debug(f"self.__dict__ -> {self.__dict__}")
-        self.components = await self.run_plugin_function(function="instance_init")
+        logging.debug(f"Instance: self.__dict__ -> {self.__dict__}")
+        await self._config.load_components(self)
+
+    async def configure(self, load):
+        self._config = Config(load=load)
 
 
-class Config(Instance):
-    """The class that configures an instance."""
+class Config:
+    """A class to parse a configuration file and load it into a data structure."""
+
+    plugin_namespace = None
+    components = {}
 
     def __init__(self, **kwargs):
         """Initialize new configuration.
@@ -65,9 +72,6 @@ class Config(Instance):
         """
         logging.debug(f"Config({kwargs})")
         self.__dict__.update(kwargs)
-
-        assert ('instance' in kwargs), f"new Config() object must have instance attribute passed to it"
-        assert (kwargs['instance'].__class__.__name__ == "Instance"), f"new Config() object's instance attribute must be of type Instance"
 
         if 'load' in kwargs:
             self.loadYamlFile(file=kwargs['load'])
@@ -101,16 +105,38 @@ class Config(Instance):
         logging.debug("Config.parse()")
         # Instance objects are subclasses of 'Instance' class.
         subclasses = [cls for cls in Instance.__subclasses__()]
-        for rootkey, rootval in data.items():
+        logging.debug(f"subclasses: {subclasses}")
+
+        # Loop over each of the data object's root key/values
+        for datarootkey, datarootval in data.items():
+
+            # Loop over each of the subclasses of the 'Instance' class
             for subclass in subclasses:
+
                 # The subclass must have an attribute 'config_namespace', whose value is the name
-                # we look for to create a new object for that subclass.
+                # of the data root key.
                 if not hasattr(subclass, 'config_namespace'):
                     continue
-                if rootkey == subclass.config_namespace:
-                    assert (type(rootval) is type([])), f"Configuration data entry '{rootkey}' value must be a list"
-                    if not rootkey in self.__dict__:
-                        self.__dict__[rootkey] = []
-                    for val in rootval:
-                        logging.debug(f"Appending new object to self.[{rootkey}]: {subclass.__name__}(instance=self.instance, {val})")
-                        self.__dict__[rootkey].append(subclass(instance=self.instance, config_data=val))
+
+                # Data root key matches 'config_namespace'
+                if datarootkey == subclass.config_namespace:
+                    # Raise exception if the root value isn't a list
+                    assert (type(datarootval) is type([])), f"Configuration data entry '{datarootkey}' value must be a list"
+
+                    if not datarootkey in self.components:
+                        self.components[datarootkey] = []
+
+                    for val in datarootval:
+                        logging.debug(f"Appending subclass and data value to list self.components.{datarootkey}: ({subclass.__name__}, {val})")
+                        self.components[datarootkey].append({"class": subclass, "config_data": val})
+
+    async def load_components(self, parent):
+        objs = parent.load_plugins()
+        logging.debug(f"objs: {objs}")
+        for name, array in self.components.items():
+            logging.debug(f"loading component {name}")
+            for d in array:
+                cls, data = d['class'], d['config_data']
+                logging.debug(f"class {cls} data {data}")
+                objs = parent.load_plugins()
+                logging.debug(f"objs: {objs}")

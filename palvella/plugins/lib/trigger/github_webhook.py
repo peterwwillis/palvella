@@ -17,7 +17,7 @@ from starlette.responses import JSONResponse, Response
 
 from palvella.lib.instance.trigger import Trigger
 from palvella.lib.logging import logging
-from palvella.plugins.lib.frontend.fastapi import Request, app
+from palvella.plugins.lib.frontend.fastapi import Request
 
 # from typing import Any
 
@@ -30,6 +30,25 @@ class GitHubWebhook(Trigger):
 
     _secret = None
     TYPE = TYPE
+
+    depends_on = [
+        {
+            "parentclass": "Frontend",
+            "type": "fastapi"
+        }
+    ]
+
+    def __pre_plugins__(self):
+        """
+        Add a route for the '/github_webhook' endpoint to the FastAPI plugin's web server.
+
+        This method is called by the main app during Instance().initialize() after it creates
+        a new object (of this class). Maps the HTTP endpoint in FastAPI to serve this function.
+        """
+        # TODO: For each configured webhook, create a new instance with its
+        #       own configuration (endpoint name, secret, repo, etc)
+        self.parent.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
+        logging.debug("Done webhook install")
 
     async def get_digest(self, request):
         """Return message digest if a secret key was provided."""
@@ -86,15 +105,3 @@ class GitHubWebhook(Trigger):
         # in the body that causes the h11 library to throw exceptions, because for
         # 204 there should be no body at all.
         return Response(status_code=HTTPStatus.NO_CONTENT.value)
-
-    async def instance_init(self, **kwargs):
-        """
-        Add a route for the '/github_webhook' endpoint to the FastAPI plugin's web server.
-
-        This method is called by the main app during Instance().initialize() after it creates
-        a new object (of this class). Maps the HTTP endpoint in FastAPI to serve this function.
-        """
-        # TODO: For each configured webhook, create a new instance with its
-        #       own configuration (endpoint name, secret, repo, etc)
-        app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
-        logging.debug("Done webhok inst init")
