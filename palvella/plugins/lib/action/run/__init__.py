@@ -7,7 +7,7 @@ from palvella.lib.logging import logging
 TYPE = "run"
 
 
-class RunAction(Action):
+class RunAction(Action, class_type="plugin"):
     """
     The 'RunAction' plugin class.
 

@@ -5,7 +5,7 @@ from palvella.lib.instance import Instance
 from palvella.lib.logging import logging
 
 
-class Trigger(Instance):
+class Trigger(Instance, class_type="plugin_base"):
     """
     The 'Trigger' plugin class.
 

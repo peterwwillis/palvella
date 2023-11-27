@@ -3,6 +3,7 @@
 
 import importlib
 import pkgutil
+import graphlib
 
 from .logging import logging
 
@@ -28,14 +29,20 @@ def list_class_plugins(cls):
 
 class Plugin:
     """The base class for plugins. Inherit this to make a new plugin class."""
+    subclasses = []
 
     def __init__(self, **kwargs):
         """Given a set of key=value pairs, update the object with those as attributes."""  # noqa
-
         logging.debug(f"{self.__class__.__name__}.__init__({kwargs})")
         self.__dict__.update(kwargs)
 
-    def load_plugins(self, function=None, subsubclasses=True, modules=True, create_objs=True, **kwargs):
+    def __init_subclass__(cls, class_type=None, **kwargs):
+        """Allow the parent class to track subclasses, and specify a type for the subclass."""
+        cls.class_type = class_type
+        super().__init_subclass__(**kwargs)
+        cls.subclasses.append(cls)
+
+    def load_plugins(self, function=None, subsubclasses=True, modules=True, create_objs=False, **kwargs):
         """
         Based on the current class, load plugins and run an optional function, returning results.
 
@@ -69,6 +76,9 @@ class Plugin:
                 elif callable(ref):
                     yield ref
                 yield
+
+        #def process_subclass(obj):
+        #    for subclass in obj.__class__.__subclasses__():
 
         logging.debug(f"load_plugins({self}, function=\"{function}\", {kwargs})")
         objs = []

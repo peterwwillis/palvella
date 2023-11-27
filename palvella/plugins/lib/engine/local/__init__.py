@@ -7,7 +7,7 @@ from palvella.lib.logging import logging
 TYPE = "local"
 
 
-class LocalEngine(Engine):
+class LocalEngine(Engine, class_type="plugin"):
     """
     The 'LocalEngine' plugin class.
 

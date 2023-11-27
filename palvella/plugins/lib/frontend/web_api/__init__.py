@@ -7,12 +7,12 @@ This plugin implements a series of APIs to interact with Palvella.
 
 from palvella.lib.logging import logging
 
-from .fastapi import FastAPIPlugin, APIRouter  # noqa: PLE402
+from ..fastapi import FastAPIPlugin, APIRouter  # noqa: PLE402
 
 TYPE = "web_api"
 
 
-class WebAPI(FastAPIPlugin):
+class WebAPI(FastAPIPlugin, class_type="plugin"):
     """
     Class of the Web API endpoints plugin.
 

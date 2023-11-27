@@ -5,7 +5,7 @@ from palvella.lib.instance import Instance
 from palvella.lib.logging import logging
 
 
-class MessageQueue(Instance):
+class MessageQueue(Instance, class_type="plugin_base"):
     """The 'MessageQueue' plugin class."""
 
     plugin_namespace = "palvella.plugins.lib.mq"

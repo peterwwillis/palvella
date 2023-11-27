@@ -11,7 +11,7 @@ from palvella.lib.logging import logging
 TYPE = "zeromq"
 
 
-class ZeroMQ(MessageQueue):
+class ZeroMQ(MessageQueue, class_type="plugin"):
     """
     Class of the ZeroMQ message queue plugin. Inherits the MessageQueue class.
 
@@ -20,11 +20,14 @@ class ZeroMQ(MessageQueue):
     """
 
     TYPE = TYPE
+    url = None  # "tcp://127.0.0.1:5680"
 
     def __pre_plugins__(self):
         self.context = zmq.asyncio.Context()
         self.sock = self.context.socket(zmq.PUB)
-        self.sock.bind(self.url)
+
+        if self.url:
+            self.sock.bind(self.url)
         self.parent.mq = self
 
     async def publish(self, *, queue, **kwargs):

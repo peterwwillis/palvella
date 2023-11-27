@@ -8,7 +8,7 @@ from palvella.lib.plugin import Plugin
 from ..logging import logging
 
 
-class Instance(Plugin):
+class Instance(Plugin, class_type="base"):
     """The 'Instance' plugin class. Creates a new instance of the application.
 
     Attributes:
@@ -133,6 +133,7 @@ class Config:
     async def load_components(self, parent):
         objs = parent.load_plugins()
         logging.debug(f"objs: {objs}")
+
         for name, array in self.components.items():
             logging.debug(f"loading component {name}")
             for d in array:

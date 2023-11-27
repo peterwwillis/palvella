@@ -1,7 +1,7 @@
 import asyncio
 import subprocess
 
-from .fastapi import FastAPI, APIRouter
+from ..fastapi import FastAPI, APIRouter
 
 import pywebio
 from pywebio.input import *

@@ -6,7 +6,7 @@ from palvella.lib.instance import Instance
 from ..logging import logging
 
 
-class Job(Instance):
+class Job(Instance, class_type="plugin_base"):
     """
     The 'Job' plugin class.
 

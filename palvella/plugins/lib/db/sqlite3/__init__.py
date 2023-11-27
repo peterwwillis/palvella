@@ -9,7 +9,7 @@ from palvella.lib.logging import logging
 TYPE = "sqlite3"
 
 
-class SQLite3DB(DB):
+class SQLite3DB(DB, class_type="plugin"):
     """
     Class of the SQLite3 database plugin. Inherits the DB class.
 

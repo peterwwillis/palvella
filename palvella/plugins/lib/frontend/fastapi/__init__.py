@@ -23,7 +23,7 @@ ASGI_SERVER_TYPE = os.environ.get("ASGI_SERVER_TYPE", "uvicorn")
 TYPE = "fastapi"
 
 
-class FastAPIPlugin(Frontend):
+class FastAPIPlugin(Frontend, class_type="plugin"):
     """
     The 'FastAPI' plugin class.
 

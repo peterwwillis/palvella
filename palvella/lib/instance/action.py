@@ -6,7 +6,7 @@ from palvella.lib.instance import Instance
 from ..logging import logging
 
 
-class Action(Instance):
+class Action(Instance, class_type="plugin_base"):
     """The 'Action' plugin class."""
 
     plugin_namespace = "palvella.plugins.lib.action"

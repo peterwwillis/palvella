@@ -25,7 +25,7 @@ from palvella.plugins.lib.frontend.fastapi import Request
 TYPE = "github_webhook"
 
 
-class GitHubWebhook(Trigger):
+class GitHubWebhook(Trigger, class_type="plugin"):
     """Class of the GitHub Webhook trigger. Inherits the Trigger class."""
 
     _secret = None
@@ -47,7 +47,7 @@ class GitHubWebhook(Trigger):
         """
         # TODO: For each configured webhook, create a new instance with its
         #       own configuration (endpoint name, secret, repo, etc)
-        self.parent.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
+        #self.parent.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
         logging.debug("Done webhook install")
 
     async def get_digest(self, request):
