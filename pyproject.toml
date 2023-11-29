@@ -561,6 +561,7 @@ python-multipart = "^0.0.6"
 hypercorn = "^0.15.0"
 zmq = "^0.0.0"
 graphlib-backport = "^1.0.3"
+importlib-resources = "^6.1.1"
 
 
 [build-system]

@@ -1,10 +1,10 @@
 
 """The library for jobs. Defines plugin class and some base functions."""
 
-from palvella.lib.instance import Instance
+from palvella.lib.instance import Component
 
 
-class Job(Instance, class_type="plugin_base"):
+class Job(Component, class_type="plugin_base"):
     """
     The 'Job' plugin class.
 

@@ -15,6 +15,7 @@ from http import HTTPStatus
 
 from starlette.responses import JSONResponse, Response
 
+from palvella.lib.plugin import PluginDependency
 from palvella.lib.instance.trigger import Trigger
 from palvella.plugins.lib.frontend.fastapi import Request
 
@@ -30,10 +31,7 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
     _secret = None
 
     depends_on = [
-        {
-            "parentclass": "Frontend",
-            "type": "fastapi"
-        }
+        PluginDependency(parentclass="Frontend", plugin_type="fastapi")
     ]
 
     def __pre_plugins__(self):

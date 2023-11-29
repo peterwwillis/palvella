@@ -15,6 +15,9 @@ class Plugin:
     subclasses = []  # A list of all subclasses of this class
     _logger = None  # makeLogger(__name__)
     _plugins = None
+    # Should be a list of PluginDependency objects
+    depends_on = []
+    class_type = None
 
     def __init__(self, **kwargs):
         """Given a set of key=value pairs, update the object with those as attributes."""  # noqa
@@ -32,64 +35,39 @@ class Plugin:
     @property
     def plugins(self):
         if self._plugins == None:
-            self._plugins = self.load_plugins()
+            self.plugins = self.load_plugins()
         topo = self.topo_sort(self._plugins.class_graph)
         return topo
-
     @plugins.setter
-    def set_plugins(self, value=None):
+    def plugins(self, value=None):
         self._plugins = value
 
     def topo_sort(self, graph):
         ts = graphlib.TopologicalSorter(graph)
         return tuple(ts.static_order())
 
-    def walk_plugins(self):
+    def walk_plugins(self, baseclass=None):
+        if baseclass == None:
+            baseclass = self.__class__
         wp = WalkPlugins()
-        wp.walk_subclass(self.__class__)
+        self._logger.debug(f"  walk_plugins({self}, {baseclass})")
+        wp.walk_subclass(baseclass)
+        wp.add_graph_dependencies()
         return wp
 
     def load_plugins(self, **kwargs):
-        """Discover and import all plugins, and return a WalkPlugins object.
-
-           WalkPlugins 'class_graph' is modified to include classes that depend on other classes, without inheriting them;
-           that way a class can declare a dependency on another plugin, without needing to have any code depend on it.
-        """
+        """Discover and import all plugins, and return a WalkPlugins object."""
         self._logger.debug(f"load_plugins({self}, {kwargs})")
-        wp = self.walk_plugins()
-
-        for cls in wp.classes:
-            # Add graph items for classes that depend on other classes,
-            # but that don't want to do multiple inheritance. To do this the
-            # class can have an attribute 'depends_on', which can define
-            # different properties that we will use to identify the class
-            # it depends on. Once we find it, we add the dependency mapping
-            # to the graph.
-            if hasattr(cls, 'depends_on'):
-                for dependency in cls.depends_on:
-                    #self._logger.debug(f"  cls {cls} dependency {dependency}")
-                    match = defaultdict(list)
-                    matchclasses = wp.classes[:]
-                    if 'parentclass' in dependency:
-                        tmpclasses = []
-                        for parentclass in [x for x in matchclasses if x.__name__ == dependency['parentclass']]:
-                            #self._logger.debug(f"    parentclass {parentclass} subclasses {parentclass.__subclasses__()}")
-                            #self._logger.debug(f"      graph {wp.class_graph[parentclass]}")
-                            tmpclasses += wp.class_graph[parentclass]
-                        matchclasses = tmpclasses
-                    #self._logger.debug(f"  matchclasses {matchclasses}")
-                    if 'type' in dependency:
-                        tmpclasses = []
-                        for m in matchclasses:
-                            #self._logger.debug(f"    matchclass {m} dependency {dependency}")
-                            if m.plugin_type == dependency['type']:
-                                #self._logger.debug(f"    type matches")
-                                tmpclasses.append(m)
-                        matchclasses = tmpclasses
-                    #self._logger.debug(f"  matchclasses {matchclasses}")
-                    if len(matchclasses) > 0:
-                        wp.class_graph[parentclass].append(cls)
+        wp = self.walk_plugins(**kwargs)
         return wp
+
+
+class PluginDependency:
+    """A class to declare what dependency (on another class/plugin) a plugin has."""
+    parentclass = None
+    plugin_type = None
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
 
 
 class WalkPlugins:
@@ -100,11 +78,43 @@ class WalkPlugins:
     # The graph of class dependencies as they are discovered
     # (subclass Y depends on subclass X, etc)
     class_graph = defaultdict(list)
+
     # A flat list of classes as they are discovered
     classes = []
+
     # A list of plugin namespaces that have already been searched for modules to
     # import, so we don't go over them again and again unnecessarily.
     searched_module_ns = []
+
+
+    def get_class_dependencies(self, deps):
+        results = []
+        for dep in deps:
+            matchclasses = self.classes[:]
+            if dep.parentclass != None:
+                tmpclasses = []
+                for parentclass in [x for x in matchclasses if x.__name__ == dep.parentclass]:
+                    tmpclasses += self.class_graph[parentclass]
+                matchclasses = tmpclasses
+            if dep.plugin_type != None:
+                tmpclasses = []
+                for cls in [x for x in matchclasses if x.plugin_type == dep.plugin_type]:
+                    tmpclasses.append(cls)
+                matchclasses = tmpclasses
+            results += matchclasses
+        return results
+
+    def add_graph_dependencies(self):
+        """Locate classes based on some dependency meta-criteria and add the dependency to 'self.class_graph'.
+
+           Dependency attributes:
+                parentclass:    The name of a class which should be the parent class of the class we want to find.
+                plugin_type:    The 'plugin_type' attribute of the class we want to find.
+        """
+        for cls in self.classes:
+            classes = self.get_class_dependencies(cls.depends_on)
+            for _class in classes:
+                self.class_graph[_class].append(cls)
 
     def walk_subclass(self, cls):
         """Walk all modules and subclasses of a base class 'cls'.
@@ -112,6 +122,7 @@ class WalkPlugins:
            Store the classes found in 'self.classes'.
            Store a graph of class dependencies in 'self.class_graph'.
         """
+        self._logger.debug(f"  walk_subclass(self, {cls})")
         self.load_plugin_modules(cls)
         self.classes += [cls]
         subclasses = cls.__subclasses__()

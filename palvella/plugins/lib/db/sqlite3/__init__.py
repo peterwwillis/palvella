@@ -20,24 +20,6 @@ class SQLite3DB(DB, class_type="plugin", plugin_type=PLUGIN_TYPE):
 
     conn = None
     cursor = None
-    config_data_defaults = {"db_path": "db.sqlite3"}
-
-    def __init__(self, **kwargs):
-        """
-        Initialize and return new SQLite3DB object.
-
-        When creating a new object, pass arbitrary key=value pairs to update the object.
-        After making a successful connection, tables are created if they don't already
-        exist.
-
-        Attributes:
-          config_data:
-            db_path:    - A file path to an SQlite3 database file. If not passed,
-                          the default variable 'db_path' in the class is used.
-        """
-
-        self._logger.debug(f"SQLite3DB({kwargs})")
-        super().__init__(**kwargs)
 
     def __pre_plugins__(self):
         self.connect()

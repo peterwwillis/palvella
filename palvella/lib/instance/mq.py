@@ -1,10 +1,10 @@
 
 """The library for message queues. Defines plugin class and some base functions."""
 
-from palvella.lib.instance import Instance
+from palvella.lib.instance import Component
 
 
-class MessageQueue(Instance, class_type="plugin_base"):
+class MessageQueue(Component, class_type="plugin_base"):
     """The 'MessageQueue' plugin class."""
 
     plugin_namespace = "palvella.plugins.lib.mq"
