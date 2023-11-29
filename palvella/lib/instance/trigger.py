@@ -2,7 +2,6 @@
 """The library for triggers. Defines plugin class and some base functions."""
 
 from palvella.lib.instance import Instance
-from palvella.lib.logging import logging
 
 
 class Trigger(Instance, class_type="plugin_base"):
@@ -23,7 +22,7 @@ class Trigger(Instance, class_type="plugin_base"):
         Arguments:
             queue: The name of the queue to send this message to (default 'trigger').
         """
-        logging.debug(f"Trigger.publish({self}, queue=\"{queue}\", {kwargs})")
+        self._logger.debug(f"Trigger.publish({self}, queue=\"{queue}\", {kwargs})")
 
         if hasattr(self, "mq"):
             await self.instance.mq.publish( name=self.mq, queue=queue, **kwargs)

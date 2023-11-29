@@ -6,20 +6,13 @@ import zmq
 import zmq.asyncio
 
 from palvella.lib.instance.mq import MessageQueue
-from palvella.lib.logging import logging
 
-TYPE = "zeromq"
+PLUGIN_TYPE = "zeromq"
 
 
-class ZeroMQ(MessageQueue, class_type="plugin"):
-    """
-    Class of the ZeroMQ message queue plugin. Inherits the MessageQueue class.
+class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
+    """Class of the ZeroMQ message queue plugin. Inherits the MessageQueue class."""
 
-    Attributes of this class:
-        'TYPE'      - The name of the type of this database.
-    """
-
-    TYPE = TYPE
     url = None  # "tcp://127.0.0.1:5680"
 
     def __pre_plugins__(self):

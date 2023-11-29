@@ -16,20 +16,18 @@ from http import HTTPStatus
 from starlette.responses import JSONResponse, Response
 
 from palvella.lib.instance.trigger import Trigger
-from palvella.lib.logging import logging
 from palvella.plugins.lib.frontend.fastapi import Request
 
 # from typing import Any
 
 
-TYPE = "github_webhook"
+PLUGIN_TYPE = "github_webhook"
 
 
-class GitHubWebhook(Trigger, class_type="plugin"):
+class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
     """Class of the GitHub Webhook trigger. Inherits the Trigger class."""
 
     _secret = None
-    TYPE = TYPE
 
     depends_on = [
         {
@@ -48,7 +46,7 @@ class GitHubWebhook(Trigger, class_type="plugin"):
         # TODO: For each configured webhook, create a new instance with its
         #       own configuration (endpoint name, secret, repo, etc)
         #self.parent.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
-        logging.debug("Done webhook install")
+        self._logger.debug("Done webhook install")
 
     async def get_digest(self, request):
         """Return message digest if a secret key was provided."""
@@ -75,24 +73,24 @@ class GitHubWebhook(Trigger, class_type="plugin"):
 
         digest = await self.get_digest(request)
         if digest is not None:
-            logging.debug(f"sig: '{sig}'")
+            self._logger.debug(f"sig: '{sig}'")
             sig_parts = sig.split("=", 1)
-            logging.debug(f"sig_parts '{sig_parts}' digest '{digest}'")
+            self._logger.debug(f"sig_parts '{sig_parts}' digest '{digest}'")
             if len(sig_parts) < 2 or sig_parts[0] != "sha1" \
                or not hmac.compare_digest(sig_parts[1], digest):
-                logging.debug("github_webhook: invalid signature")
+                self._logger.debug("github_webhook: invalid signature")
                 return JSONResponse({"error": "Invalid signature"}, status_code=400)
 
         if content_type == "application/json":
             data = await request.json()
         else:
-            logging.debug(f"github_webhook: error: content_type '{content_type}' not implemented")
+            self._logger.debug(f"github_webhook: error: content_type '{content_type}' not implemented")
             return Response(status_code=500)
 
         if data is None:
             return JSONResponse({"error": "Request body must contain json"}, status_code=400)
 
-        logging.info(f"event_type:{event_type} data:{data} ({delivery})")
+        self._logger.info(f"event_type:{event_type} data:{data} ({delivery})")
 
         # MessageQueue: Publish this message to the message queue as specified in
         #               the configuration for this webhook.

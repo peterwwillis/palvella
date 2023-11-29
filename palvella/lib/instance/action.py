@@ -3,8 +3,6 @@
 
 from palvella.lib.instance import Instance
 
-from ..logging import logging
-
 
 class Action(Instance, class_type="plugin_base"):
     """The 'Action' plugin class."""
@@ -14,4 +12,4 @@ class Action(Instance, class_type="plugin_base"):
 
     def run(self, **kwargs):
         """Run an action."""
-        logging.debug(f"Action.run({kwargs})")
+        self._logger.debug(f"Action.run({kwargs})")

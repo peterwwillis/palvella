@@ -20,17 +20,11 @@ from palvella.lib.instance.frontend import Frontend
 
 
 ASGI_SERVER_TYPE = os.environ.get("ASGI_SERVER_TYPE", "uvicorn")
-TYPE = "fastapi"
+PLUGIN_TYPE = "fastapi"
 
 
-class FastAPIPlugin(Frontend, class_type="plugin"):
-    """
-    The 'FastAPI' plugin class.
-
-    Attributes:
-        TYPE: The name of the type of this Frontend plugin.
-    """
-    TYPE = TYPE
+class FastAPIPlugin(Frontend, class_type="plugin", plugin_type=PLUGIN_TYPE):
+    """The 'FastAPI' plugin class."""
 
     def __pre_plugins__(self):
         """Initialize the FastAPI app and web server before loading the plugins that use it."""

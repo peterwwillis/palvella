@@ -4,12 +4,11 @@
 import sqlite3  # noqa
 
 from palvella.lib.instance.db import DB
-from palvella.lib.logging import logging
 
-TYPE = "sqlite3"
+PLUGIN_TYPE = "sqlite3"
 
 
-class SQLite3DB(DB, class_type="plugin"):
+class SQLite3DB(DB, class_type="plugin", plugin_type=PLUGIN_TYPE):
     """
     Class of the SQLite3 database plugin. Inherits the DB class.
 
@@ -19,7 +18,6 @@ class SQLite3DB(DB, class_type="plugin"):
         cursor          - The SQLite3 cursor (from 'conn')
     """
 
-    TYPE = TYPE
     conn = None
     cursor = None
     config_data_defaults = {"db_path": "db.sqlite3"}
@@ -38,7 +36,7 @@ class SQLite3DB(DB, class_type="plugin"):
                           the default variable 'db_path' in the class is used.
         """
 
-        logging.debug(f"SQLite3DB({kwargs})")
+        self._logger.debug(f"SQLite3DB({kwargs})")
         super().__init__(**kwargs)
 
     def __pre_plugins__(self):
@@ -48,7 +46,7 @@ class SQLite3DB(DB, class_type="plugin"):
         """Establish a connection to the SQLite3 database."""
         self.conn = sqlite3.connect(self.config_data['db_path'], check_same_thread=False)
         self.cursor = self.conn.cursor()
-        logging.debug(f"DB Connection established to {self.config_data['db_path']}")
+        self._logger.debug(f"DB Connection established to {self.config_data['db_path']}")
         self.ensure_tables_exist()
 
     def table_exists(self, name):

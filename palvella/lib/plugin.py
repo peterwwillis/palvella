@@ -3,108 +3,147 @@
 
 import importlib
 import pkgutil
-import graphlib
+from collections import defaultdict
 
-from .logging import logging
+import graphlib  # our poetry requirements include the 'graphlib_backport' module
 
-
-def list_class_plugins(cls):
-    """
-    Generate a list of plugin names and namespaces.
-
-    Accepts a class, which needs an attribute 'plugin_namespace', whose value is a string
-    which is the name of a module to load. Loads that module and iterates over the namespace,
-    yielding the name of modules in said namespace.
-    """
-    logging.debug(f"list_class_plugins({cls})")
-    if not hasattr(cls, 'plugin_namespace') or cls.plugin_namespace == None:
-        logging.debug(f"No 'plugin_namespace' found in class {cls}")
-        yield
-    else:
-        module = importlib.import_module(cls.plugin_namespace)
-        for _finder, name, _ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
-            logging.debug(f"Class {cls}: Found plugin '{name}'")
-            yield name, importlib.import_module(name)
+from .logging import makeLogger
 
 
 class Plugin:
     """The base class for plugins. Inherit this to make a new plugin class."""
-    subclasses = []
+    subclasses = []  # A list of all subclasses of this class
+    _logger = None  # makeLogger(__name__)
+    _plugins = None
 
     def __init__(self, **kwargs):
         """Given a set of key=value pairs, update the object with those as attributes."""  # noqa
-        logging.debug(f"{self.__class__.__name__}.__init__({kwargs})")
+        self._logger = makeLogger(self.__class__.__module__ + "/" + self.__class__.__name__)
+        self._logger.debug(f"{self.__class__.__name__}.__init__({kwargs})")
         self.__dict__.update(kwargs)
 
-    def __init_subclass__(cls, class_type=None, **kwargs):
+    def __init_subclass__(cls, class_type=None, plugin_type=None, **kwargs):
         """Allow the parent class to track subclasses, and specify a type for the subclass."""
         cls.class_type = class_type
+        cls.plugin_type = plugin_type
         super().__init_subclass__(**kwargs)
         cls.subclasses.append(cls)
 
-    def load_plugins(self, function=None, subsubclasses=True, modules=True, create_objs=False, **kwargs):
+    @property
+    def plugins(self):
+        if self._plugins == None:
+            self._plugins = self.load_plugins()
+        topo = self.topo_sort(self._plugins.class_graph)
+        return topo
+
+    @plugins.setter
+    def set_plugins(self, value=None):
+        self._plugins = value
+
+    def topo_sort(self, graph):
+        ts = graphlib.TopologicalSorter(graph)
+        return tuple(ts.static_order())
+
+    def walk_plugins(self):
+        wp = WalkPlugins()
+        wp.walk_subclass(self.__class__)
+        return wp
+
+    def load_plugins(self, **kwargs):
+        """Discover and import all plugins, and return a WalkPlugins object.
+
+           WalkPlugins 'class_graph' is modified to include classes that depend on other classes, without inheriting them;
+           that way a class can declare a dependency on another plugin, without needing to have any code depend on it.
         """
-        Based on the current class, load plugins and run an optional function, returning results.
+        self._logger.debug(f"load_plugins({self}, {kwargs})")
+        wp = self.walk_plugins()
 
-        First looks up subclasses of the current object.
+        for cls in wp.classes:
+            # Add graph items for classes that depend on other classes,
+            # but that don't want to do multiple inheritance. To do this the
+            # class can have an attribute 'depends_on', which can define
+            # different properties that we will use to identify the class
+            # it depends on. Once we find it, we add the dependency mapping
+            # to the graph.
+            if hasattr(cls, 'depends_on'):
+                for dependency in cls.depends_on:
+                    #self._logger.debug(f"  cls {cls} dependency {dependency}")
+                    match = defaultdict(list)
+                    matchclasses = wp.classes[:]
+                    if 'parentclass' in dependency:
+                        tmpclasses = []
+                        for parentclass in [x for x in matchclasses if x.__name__ == dependency['parentclass']]:
+                            #self._logger.debug(f"    parentclass {parentclass} subclasses {parentclass.__subclasses__()}")
+                            #self._logger.debug(f"      graph {wp.class_graph[parentclass]}")
+                            tmpclasses += wp.class_graph[parentclass]
+                        matchclasses = tmpclasses
+                    #self._logger.debug(f"  matchclasses {matchclasses}")
+                    if 'type' in dependency:
+                        tmpclasses = []
+                        for m in matchclasses:
+                            #self._logger.debug(f"    matchclass {m} dependency {dependency}")
+                            if m.plugin_type == dependency['type']:
+                                #self._logger.debug(f"    type matches")
+                                tmpclasses.append(m)
+                        matchclasses = tmpclasses
+                    #self._logger.debug(f"  matchclasses {matchclasses}")
+                    if len(matchclasses) > 0:
+                        wp.class_graph[parentclass].append(cls)
+        return wp
 
-        If there are sub-subclasses which contain the function we want
-        to run, a new object of that sub-subclass is created,
-        the function is run, and that object is collected to be returned
-        at the end of this function.
 
-        Otherwise, looks up all plugins that are subclasses of the current class.
-        For each, look up function name and call it, passing \*\*kwargs.
+class WalkPlugins:
+    """Manage the traversal of plugins and their classes."""
 
-        Arguments:
-            If subsubclasses is True, looks at all sub-subclasses of the current class, iterating
-            over them. If 'function' attribute is not None, looks for that function in each
-            sub-subclass, and calls it, returning the result.
+    _logger = makeLogger(__module__ + "/WalkPlugins")
 
-            If modules is True, looks at 'plugin_namespace' attribute of the current class, and loads
-            any modules found in that namespace.
+    # The graph of class dependencies as they are discovered
+    # (subclass Y depends on subclass X, etc)
+    class_graph = defaultdict(list)
+    # A flat list of classes as they are discovered
+    classes = []
+    # A list of plugin namespaces that have already been searched for modules to
+    # import, so we don't go over them again and again unnecessarily.
+    searched_module_ns = []
 
-            If create_objs is True, attempts to create a new object for each plugin class found,
-            and returns the list. If create_objs is False, returns an empty list.
+    def walk_subclass(self, cls):
+        """Walk all modules and subclasses of a base class 'cls'.
+
+           Store the classes found in 'self.classes'.
+           Store a graph of class dependencies in 'self.class_graph'.
         """
+        self.load_plugin_modules(cls)
+        self.classes += [cls]
+        subclasses = cls.__subclasses__()
+        if len(subclasses) > 0:
+            for x in subclasses:
+                # Add class dependencies to the graph
+                self.class_graph[x].append(cls)
+            for subclass in subclasses:
+                self.walk_subclass(subclass)
 
-        def get_ref(refs, function):
-            """Pass a list of references and optional function reference, get back a callable or nothing."""
-            for ref in refs:
-                if function != None and hasattr(ref, function) and callable(getattr(ref, function)):
-                    yield getattr(ref, function)
-                elif callable(ref):
-                    yield ref
+    def load_plugin_modules(self, cls):
+        """Run self.list_class_plugins and return only the import_module() results."""
+        return list(v for k,v in [x for x in self.list_class_plugins(cls) if x is not None])
+
+    def list_class_plugins(self, cls):
+        """
+        Generate a list of plugin names and namespaces.
+
+        Accepts a class, which needs an attribute 'plugin_namespace', whose value is a string
+        which is the name of a module to load. Loads that module and iterates over the namespace,
+        yielding the name of modules in said namespace.
+        """
+        self._logger.debug(f"      list_class_plugins({cls})")
+        if not hasattr(cls, 'plugin_namespace') or cls.plugin_namespace == None:
+            self._logger.debug(f"        No 'plugin_namespace' found in class {cls}")
+            yield
+        else:
+            if cls.plugin_namespace in self.searched_module_ns:
                 yield
-
-        #def process_subclass(obj):
-        #    for subclass in obj.__class__.__subclasses__():
-
-        logging.debug(f"load_plugins({self}, function=\"{function}\", {kwargs})")
-        objs = []
-
-        # Run this before anything else. It will load the plugin namespace of the current class
-        # and discover and import all the modules. That will load in new subclasses of the
-        # current class, allowing us to find more plugins to load.
-        class_plugins = list(v for k,v in [x for x in list_class_plugins(self.__class__) if x is not None])
-
-        logging.debug(f"subclasses: {self.__class__.__subclasses__()}")
-        for subclass in self.__class__.__subclasses__():
-
-            plugin_refs = list(v for k,v in [x for x in list_class_plugins(subclass) if x is not None])
-
-            if subsubclasses:
-                for ref in [x for x in get_ref(subclass.__subclasses__(), function) if x is not None]:
-                    if create_objs:
-                        logging.debug(f"adding obj: {ref}(parent=self, {kwargs})")
-                        objs.append(ref(parent=self, **kwargs))
-
-            if modules:
-                for ref in [x for x in get_ref(plugin_refs, function) if x is not None]:
-                    if create_objs:
-                        logging.debug(f"adding module: {ref}({kwargs})")
-                        objs.append(ref(**kwargs))
-
-        logging.debug(f"subclasses: {self.__class__.__subclasses__()}")
-
-        return objs
+            else:
+                module = importlib.import_module(cls.plugin_namespace)
+                for _finder, name, _ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
+                    self._logger.debug(f"        Class {cls}: Found plugin '{name}'")
+                    yield name, importlib.import_module(name)
+                self.searched_module_ns.append(cls.plugin_namespace)

@@ -10,7 +10,6 @@ async def main():
     inst = Instance()
     await inst.configure("foo.yaml")
     await inst.initialize()
-    logging.debug(f"subclasses: {inst.subclasses}")
     logging.debug("done loading instance")
 
     # Infinite loop to wait for tasks to die and finally exit ourselves.

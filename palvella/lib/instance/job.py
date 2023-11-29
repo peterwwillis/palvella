@@ -3,8 +3,6 @@
 
 from palvella.lib.instance import Instance
 
-from ..logging import logging
-
 
 class Job(Instance, class_type="plugin_base"):
     """
@@ -21,6 +19,6 @@ class Job(Instance, class_type="plugin_base"):
 
     def run(self, **kwargs):
         """Run a Job."""
-        logging.debug(f"Job.run({kwargs})")
+        self._logger.debug(f"Job.run({kwargs})")
         for action in self.actions:
-            logging.debug(f"  action '{action}'")
+            self._logger.debug(f"  action '{action}'")
