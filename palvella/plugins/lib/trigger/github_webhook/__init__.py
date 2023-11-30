@@ -19,9 +19,6 @@ from palvella.lib.plugin import PluginDependency
 from palvella.lib.instance.trigger import Trigger
 from palvella.plugins.lib.frontend.fastapi import Request
 
-# from typing import Any
-
-
 PLUGIN_TYPE = "github_webhook"
 
 
@@ -46,7 +43,8 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
 
         # TODO: For each configured webhook, create a new instance with its
         #       own configuration (endpoint name, secret, repo, etc)
-        fastapi.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
+        for obj in fastapi:
+            obj.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
         self._logger.debug("Done webhook install")
 
     async def get_digest(self, request):

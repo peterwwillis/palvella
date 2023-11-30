@@ -105,6 +105,7 @@ class Component(Plugin, class_type="base"):
         self._logger.debug(f"self.parent.plugins {self.parent.plugins}")
         results = self.parent.plugins.get_class_dependencies([dep])
         self._logger.debug(f"results: {results}")
+        return results
 
 
 class Config:
@@ -148,7 +149,7 @@ class Config:
 
         # We don't need to do the whole loading of plugins yet, we just need
         # to import all the modules to load all the subclasses.
-        self.parent.walk_plugins()
+        self.parent.plugins
         subclasses = self.parent.subclasses
 
         objects = defaultdict(list)

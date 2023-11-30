@@ -42,6 +42,8 @@ class Plugin:
         return wp
 
     def walk_plugins(self, args=None):
+        # TODO: FIXME: currently if this is run from Instance(), it will result in duplicate
+        # entries in wp.classes. Fix this?
         if hasattr(self, 'walk_plugins_args'):
             args = self.walk_plugins_args
         if not 'baseclass' in args:
@@ -131,8 +133,8 @@ class WalkPlugins:
         for cls in self.classes:
             classes = self.get_class_dependencies(cls.depends_on)
             for _class in classes:
-                if not cls in self.class_graph[_class]:
-                    self.class_graph[_class].append(cls)
+                if not _class in self.class_graph[cls]:
+                    self.class_graph[cls].append(_class)
 
     def walk_subclass(self, cls):
         """Walk all modules and subclasses of class 'cls'.
@@ -140,9 +142,10 @@ class WalkPlugins:
            Store the classes found in 'self.classes'.
            Store a graph of class dependencies in 'self.class_graph'.
         """
-        #self._logger.debug(f"  walk_subclass(self, {cls})")
+        self._logger.debug(f"  walk_subclass(self, {cls})")
         self.load_plugin_modules(cls)
         self.classes += [cls]
+        self._logger.debug(f"  appended to self.classes {self.classes}")
         subclasses = cls.__subclasses__()
         if len(subclasses) > 0:
             for x in subclasses:

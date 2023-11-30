@@ -26,9 +26,14 @@ PLUGIN_TYPE = "fastapi"
 class FastAPIPlugin(Frontend, class_type="plugin", plugin_type=PLUGIN_TYPE):
     """The 'FastAPI' plugin class."""
 
+    app = FastAPI()
+
     def __pre_plugins__(self):
         """Initialize the FastAPI app and web server before loading the plugins that use it."""
-        self.app = FastAPI()
+        # TODO FIXME: Had to move this to the class level because it wasn't getting found
+        # when the dependent plugin wanted it. Maybe this means we should wait until this
+        # plugin is done initializing before continuing with the dependent plugins?
+        #self.app = FastAPI()
         #self.APP_ENTRY = "palvella.plugins.lib.frontend.fastapi:app"
         self.APP_ENTRY = self.app
 
