@@ -7,7 +7,7 @@ from palvella.lib import Instance, logging
 
 async def main():
 
-    inst = Instance(load="foo.yaml")
+    inst = Instance(config_path="foo.yaml")
     logging.debug("done loading instance")
 
     # Infinite loop to wait for tasks to die and finally exit ourselves.

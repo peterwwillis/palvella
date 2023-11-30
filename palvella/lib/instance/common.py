@@ -19,17 +19,33 @@ class Instance(Plugin, class_type="base"):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if hasattr(self, 'load'):
-            self.config = Config(parent=self, load=self.load)
+
+        # Load plugin subclasses from the 'Component' class
+        self.walk_plugins_args = { 'baseclass': Component }
+
+        if hasattr(self, 'config_path'):
+            self.config = Config(parent=self, config_path=self.config_path)
         if self.config:
             self.initialize()
 
     def initialize(self):
         """Initialize the new instance."""
         self._logger.debug(f"Initializing self.__dict__ -> {self.__dict__}")
-        # Load plugin subclasses from the 'Plugin' class
-        self.plugins = self.load_plugins(baseclass=Plugin)
-        self._config.load_components(self)
+        self.load_components()
+
+    def load_components(self):
+        """For all plugins of class_type 'plugin', create new objects."""
+        loaded_objects = []
+        base_plugins = [x for x in self.plugins.topo_sort() if (x.class_type == "plugin")]
+        for plugin in base_plugins:
+            if plugin.config_namespace in self.config.data_objects:
+                for parsed_component in self.config.data_objects[plugin.config_namespace]:
+                    _class, _data = parsed_component['class'], parsed_component['config_data']
+                    loaded_objects.append(_class(parent=self, config_data=_data))
+            else:
+                loaded_objects.append(plugin(parent=self))
+        self._logger.debug(f"loaded_objects: {loaded_objects}")
+        self.components = loaded_objects
 
     @property
     def config(self):
@@ -61,6 +77,7 @@ class Component(Plugin, class_type="base"):
         Initialize the new object.
 
         Arguments:
+            parent: A reference to the parent Instance() object
             config_data: A dict of key=value pairs loaded from Config.parse().
         """
 
@@ -83,41 +100,45 @@ class Component(Plugin, class_type="base"):
             if callable(getattr(self, self._pre_plugins_ref_name)):
                 getattr(self, self._pre_plugins_ref_name)()
 
+    def get_component(self, dep):
+        self._logger.debug(f"get_component({self}, {dep})")
+        self._logger.debug(f"self.parent.plugins {self.parent.plugins}")
+        results = self.parent.plugins.get_class_dependencies([dep])
+        self._logger.debug(f"results: {results}")
+
 
 class Config:
     """A class to parse a configuration file and load it into a data structure."""
 
-    parsed_components = defaultdict(list)
-    parent = None
     _logger = makeLogger(__module__ + "/Config")
+    _config_path = None
 
     def __init__(self, **kwargs):
         """Initialize new configuration.
 
         Arguments:
-            instance: A reference to the parent Instance() object that loaded this Config() object.
+            parent: A reference to the parent Instance() object
             load: A string which points at a YAML configuration file to load().
         """
         self._logger.debug(f"Config({kwargs})")
         self.__dict__.update(kwargs)
+        self.load_config()
 
-        if 'load' in kwargs:
-            self.loadYamlFile(file=kwargs['load'])
+    def load_config(self, config_path=None):
+        config_path = self.config_path if self.config_path else config_path
+        if config_path:
+            self.loadYamlFile(file=self.config_path)
+            self.data_objects = self.get_data_objects()
 
-    def loadYamlFile(self, file=None):
-        """Load configuration, parse it, and return the result.
-
-        Arguments:
-            file: A YAML file with configuration data.
-        """
-        if file is not None:
-            with open(file, "r", encoding="utf-8") as f:
-                yaml = YAML(typ='safe')
-                # Parse and return the config
-                return self.parse(yaml.load(f))
+    def loadYamlFile(self, file):
+        """Load configuration, parse it, and return the result."""
+        with open(file, "r", encoding="utf-8") as f:
+            yaml = YAML(typ='safe')
+            self.data = yaml.load(f)
+            return
         raise ValueError("No configuration provided")
 
-    def parse(self, data):
+    def get_data_objects(self):
         """Parse configuration data and create new objects in current instance.
 
         For each root key:value, look for a subclass of type 'plugin_base' that has a
@@ -125,46 +146,22 @@ class Config:
         Append the subclass and the value to 'self.parsed_components'.
         """
 
-        self._logger.debug("Config.parse()")
-
         # We don't need to do the whole loading of plugins yet, we just need
         # to import all the modules to load all the subclasses.
         self.parent.walk_plugins()
-
         subclasses = self.parent.subclasses
-        self._logger.debug(f"subclasses: {subclasses}")
 
-        for datarootkey, datarootval in data.items():
+        objects = defaultdict(list)
+        for datarootkey, datarootval in self.data.items():
             for subclass in [x for x in subclasses if x.class_type == "plugin"]:
                 # The subclass must have an attribute 'config_namespace', whose value is the name
                 # of the data root key.
                 if not hasattr(subclass, 'config_namespace'):
                     continue
-                if datarootkey == subclass.config_namespace:
-                    assert (type(datarootval) is type([])), f"Configuration data entry '{datarootkey}' value must be a list"
-                    for val in datarootval:
-                        self.parsed_components[datarootkey].append({"class": subclass, "config_data": val})
+                if datarootkey != subclass.config_namespace:
+                    continue
+                assert (type(datarootval) is type([])), f"Configuration data entry '{datarootkey}' value must be a list"
+                for val in datarootval:
+                    objects[datarootkey].append({"class": subclass, "config_data": val})
+        return objects
 
-    def load_components(self, parent):
-
-        # NOTE: This is probably terrible design; we're explicitly excluding classes of type 'base',
-        #       because we're trying to avoid loading the Instance class, because we don't want to
-        #       create a new Instance while we're trying to configure the first Instance!
-        #       Added an extra test to exclude the Instance class name, just to be extra explicit;
-        #       this could probably use a better solution?
-        base_plugins = [x for x in parent.plugins if (x.class_type == "plugin")]
-
-        # TODO NEXT: finish writing this function so that it loads a new object for every 
-        #            'objs' class, but passing in the configuration from any 'parsed_components'
-        #            because those are the ones we actually want to configure.
-
-        loaded_objects = []
-        for plugin in base_plugins:
-            self._logger.debug(f"plugin {plugin}")
-            if hasattr(plugin, 'config_namespace') and plugin.config_namespace in self.parsed_components:
-                for parsed_component in self.parsed_components[plugin.config_namespace]:
-                    _class, _data = parsed_component['class'], parsed_component['config_data']
-                    loaded_objects.append(_class(parent=parent, config_data=_data))
-            else:
-                loaded_objects.append(plugin(parent=parent))
-        self._logger.debug(f"loaded_objects: {loaded_objects}")

@@ -30,9 +30,8 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
 
     _secret = None
 
-    depends_on = [
-        PluginDependency(parentclass="Frontend", plugin_type="fastapi")
-    ]
+    fastapi_dependency = PluginDependency(parentclass="Frontend", plugin_type="fastapi")
+    depends_on = [ fastapi_dependency ]
 
     def __pre_plugins__(self):
         """
@@ -41,9 +40,13 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         This method is called by the main app during Instance().initialize() after it creates
         a new object (of this class). Maps the HTTP endpoint in FastAPI to serve this function.
         """
+
+        fastapi = self.get_component(self.fastapi_dependency)
+        self._logger.debug(f"fastapi {fastapi}")
+
         # TODO: For each configured webhook, create a new instance with its
         #       own configuration (endpoint name, secret, repo, etc)
-        #self.parent.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
+        fastapi.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
         self._logger.debug("Done webhook install")
 
     async def get_digest(self, request):

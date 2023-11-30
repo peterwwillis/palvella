@@ -4,6 +4,7 @@
 import importlib
 import pkgutil
 from collections import defaultdict
+from dataclasses import dataclass
 
 import graphlib  # our poetry requirements include the 'graphlib_backport' module
 
@@ -18,6 +19,8 @@ class Plugin:
     # Should be a list of PluginDependency objects
     depends_on = []
     class_type = None
+    plugin_namespace = None
+    config_namespace = None
 
     def __init__(self, **kwargs):
         """Given a set of key=value pairs, update the object with those as attributes."""  # noqa
@@ -32,34 +35,32 @@ class Plugin:
         super().__init_subclass__(**kwargs)
         cls.subclasses.append(cls)
 
-    @property
-    def plugins(self):
-        if self._plugins == None:
-            self.plugins = self.load_plugins()
-        topo = self.topo_sort(self._plugins.class_graph)
-        return topo
-    @plugins.setter
-    def plugins(self, value=None):
-        self._plugins = value
-
-    def topo_sort(self, graph):
-        ts = graphlib.TopologicalSorter(graph)
-        return tuple(ts.static_order())
-
-    def walk_plugins(self, baseclass=None):
-        if baseclass == None:
-            baseclass = self.__class__
-        wp = WalkPlugins()
-        self._logger.debug(f"  walk_plugins({self}, {baseclass})")
-        wp.walk_subclass(baseclass)
-        wp.add_graph_dependencies()
-        return wp
-
     def load_plugins(self, **kwargs):
         """Discover and import all plugins, and return a WalkPlugins object."""
         self._logger.debug(f"load_plugins({self}, {kwargs})")
         wp = self.walk_plugins(**kwargs)
         return wp
+
+    def walk_plugins(self, args=None):
+        if hasattr(self, 'walk_plugins_args'):
+            args = self.walk_plugins_args
+        if not 'baseclass' in args:
+            args['baseclass'] = self.__class__
+        wp = WalkPlugins()
+        self._logger.debug(f"  walk_plugins({self}, {args})")
+        wp.walk_subclass(args['baseclass'])
+        wp.add_graph_dependencies()
+        return wp
+
+    @property
+    def plugins(self):
+        if self._plugins == None:
+            self.plugins = self.load_plugins()
+        return self._plugins
+    @plugins.setter
+    def plugins(self, value=None):
+        self._plugins = value
+
 
 
 class PluginDependency:
@@ -69,7 +70,7 @@ class PluginDependency:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-
+@dataclass(unsafe_hash=True)
 class WalkPlugins:
     """Manage the traversal of plugins and their classes."""
 
@@ -86,22 +87,38 @@ class WalkPlugins:
     # import, so we don't go over them again and again unnecessarily.
     searched_module_ns = []
 
+    def topo_sort(self, graph=None):
+        if graph == None:
+            graph = self.class_graph
+        ts = graphlib.TopologicalSorter(graph)
+        return tuple(ts.static_order())
 
     def get_class_dependencies(self, deps):
         results = []
+        self._logger.debug(f"get_class_dependencies({self}, {deps})")
+        self._logger.debug(f"graph {self.class_graph}")
         for dep in deps:
+            self._logger.debug(f"dep {dep}")
             matchclasses = self.classes[:]
+            self._logger.debug(f"matchclasses: {matchclasses}")
             if dep.parentclass != None:
                 tmpclasses = []
-                for parentclass in [x for x in matchclasses if x.__name__ == dep.parentclass]:
-                    tmpclasses += self.class_graph[parentclass]
+                for cls in matchclasses:
+                    self._logger.debug(f"  cls {cls}")
+                    for dependent in self.class_graph[cls]:
+                        if dependent.__name__ == dep.parentclass:
+                            self._logger.debug(f"Found parent class {dependent} under self.class_graph[{cls}]")
+                            tmpclasses += [cls]
                 matchclasses = tmpclasses
+            self._logger.debug(f"matchclasses: {matchclasses}")
             if dep.plugin_type != None:
                 tmpclasses = []
                 for cls in [x for x in matchclasses if x.plugin_type == dep.plugin_type]:
+                    self._logger.debug(f"Found plugin type for class {cls}")
                     tmpclasses.append(cls)
                 matchclasses = tmpclasses
             results += matchclasses
+        self._logger.debug(f"found deps: {results}")
         return results
 
     def add_graph_dependencies(self):
@@ -114,22 +131,24 @@ class WalkPlugins:
         for cls in self.classes:
             classes = self.get_class_dependencies(cls.depends_on)
             for _class in classes:
-                self.class_graph[_class].append(cls)
+                if not cls in self.class_graph[_class]:
+                    self.class_graph[_class].append(cls)
 
     def walk_subclass(self, cls):
-        """Walk all modules and subclasses of a base class 'cls'.
+        """Walk all modules and subclasses of class 'cls'.
 
            Store the classes found in 'self.classes'.
            Store a graph of class dependencies in 'self.class_graph'.
         """
-        self._logger.debug(f"  walk_subclass(self, {cls})")
+        #self._logger.debug(f"  walk_subclass(self, {cls})")
         self.load_plugin_modules(cls)
         self.classes += [cls]
         subclasses = cls.__subclasses__()
         if len(subclasses) > 0:
             for x in subclasses:
                 # Add class dependencies to the graph
-                self.class_graph[x].append(cls)
+                if not cls in self.class_graph[x]:
+                    self.class_graph[x].append(cls)
             for subclass in subclasses:
                 self.walk_subclass(subclass)
 
