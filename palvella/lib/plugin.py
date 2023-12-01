@@ -66,11 +66,55 @@ class Plugin:
 
 
 class PluginDependency:
-    """A class to declare what dependency (on another class/plugin) a plugin has."""
+    """A class to declare what dependency (on another class/plugin) a plugin has.
+
+       Attributes:
+            parentclass:    The name of a class which should be the parent class of the class we want to find.
+            plugin_type:    The 'plugin_type' attribute of the class we want to find.
+    """
     parentclass = None
     plugin_type = None
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+
+
+def get_class(obj):
+    if isinstance(obj, type):
+        return obj
+    return obj.__class__
+
+def match_class_dependencies(self, objects, deps):
+    """Match a class or instance of a class against a PluginDependency().
+
+       'self' is just any object with a '_logger' method.
+       'objects' is a list of either classes or class instances.
+       'deps' is a list of PluginDepency() instances.
+
+       Returns the matching classes/instances.
+    """
+    def matchParentClass(self, objects, dep):
+            for match in objects:
+                self._logger.debug(f"  match {match}")
+                for parent in get_class(match).__bases__:
+                    if dep.parentclass == parent.__name__:
+                        self._logger.debug(f"Found parent class {parent} in class of object {match}]")
+                        yield match
+    def matchPluginType(self, objects, dep):
+            for obj in [x for x in objects if x.plugin_type == dep.plugin_type]:
+                self._logger.debug(f"Found plugin_type {dep.plugin_type} for object {obj}")
+                yield obj
+    results = []
+    for dep in deps:
+        self._logger.debug(f"dep {dep}")
+        matches = objects[:]
+        self._logger.debug(f"matches: {matches}")
+        if dep.parentclass != None:
+            matches = matchParentClass(self, matches, dep)
+        if dep.plugin_type != None:
+            matches = matchPluginType(self, matches, dep)
+        results += matches
+    self._logger.debug(f"found deps: {results}")
+    return results
 
 @dataclass(unsafe_hash=True)
 class WalkPlugins:
@@ -99,36 +143,11 @@ class WalkPlugins:
         results = []
         self._logger.debug(f"get_class_dependencies({self}, {deps})")
         self._logger.debug(f"graph {self.class_graph}")
-        for dep in deps:
-            self._logger.debug(f"dep {dep}")
-            matchclasses = self.classes[:]
-            self._logger.debug(f"matchclasses: {matchclasses}")
-            if dep.parentclass != None:
-                tmpclasses = []
-                for cls in matchclasses:
-                    self._logger.debug(f"  cls {cls}")
-                    for dependent in self.class_graph[cls]:
-                        if dependent.__name__ == dep.parentclass:
-                            self._logger.debug(f"Found parent class {dependent} under self.class_graph[{cls}]")
-                            tmpclasses += [cls]
-                matchclasses = tmpclasses
-            self._logger.debug(f"matchclasses: {matchclasses}")
-            if dep.plugin_type != None:
-                tmpclasses = []
-                for cls in [x for x in matchclasses if x.plugin_type == dep.plugin_type]:
-                    self._logger.debug(f"Found plugin type for class {cls}")
-                    tmpclasses.append(cls)
-                matchclasses = tmpclasses
-            results += matchclasses
-        self._logger.debug(f"found deps: {results}")
-        return results
+        return match_class_dependencies(self, self.classes, deps)
 
     def add_graph_dependencies(self):
         """Locate classes based on some dependency meta-criteria and add the dependency to 'self.class_graph'.
 
-           Dependency attributes:
-                parentclass:    The name of a class which should be the parent class of the class we want to find.
-                plugin_type:    The 'plugin_type' attribute of the class we want to find.
         """
         for cls in self.classes:
             classes = self.get_class_dependencies(cls.depends_on)
@@ -160,8 +179,7 @@ class WalkPlugins:
         return list(v for k,v in [x for x in self.list_class_plugins(cls) if x is not None])
 
     def list_class_plugins(self, cls):
-        """
-        Generate a list of plugin names and namespaces.
+        """Generate a list of plugin names and namespaces.
 
         Accepts a class, which needs an attribute 'plugin_namespace', whose value is a string
         which is the name of a module to load. Loads that module and iterates over the namespace,

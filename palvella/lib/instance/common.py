@@ -5,9 +5,10 @@ from collections import defaultdict
 from ruamel.yaml import YAML
 import importlib_resources
 from pathlib import Path
+from dataclasses import dataclass
 
 
-from palvella.lib.plugin import Plugin
+from palvella.lib.plugin import Plugin, match_class_dependencies
 
 from ..logging import makeLogger
 
@@ -16,6 +17,7 @@ class Instance(Plugin, class_type="base"):
     """The 'Instance' plugin class. Creates a new instance of the application."""
 
     plugin_namespace = "palvella.lib.instance"
+    components = []  # The list of instantiated objects of each plugin
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -31,21 +33,29 @@ class Instance(Plugin, class_type="base"):
     def initialize(self):
         """Initialize the new instance."""
         self._logger.debug(f"Initializing self.__dict__ -> {self.__dict__}")
-        self.load_components()
+        self.instantiate_components()
 
-    def load_components(self):
-        """For all plugins of class_type 'plugin', create new objects."""
-        loaded_objects = []
+    def instantiate_components(self):
+        """Create new instances of plugin objects.
+
+           Walks the graph of all plugins of class_type 'plugin', sorted topologically 
+           (to handle dependencies first).
+
+           If there's a 'self.config.data_objects' entry for a given plugin, uses those
+           'data_objects' configuration to create a new instance of that plugin.
+           If no entry in 'data_objects', just creates a new instance of that plugin with
+           no configuration.
+
+           All new objects are appended to 'self.components' immediately.
+        """
         base_plugins = [x for x in self.plugins.topo_sort() if (x.class_type == "plugin")]
         for plugin in base_plugins:
-            if plugin.config_namespace in self.config.data_objects:
-                for parsed_component in self.config.data_objects[plugin.config_namespace]:
-                    _class, _data = parsed_component['class'], parsed_component['config_data']
-                    loaded_objects.append(_class(parent=self, config_data=_data))
-            else:
-                loaded_objects.append(plugin(parent=self))
-        self._logger.debug(f"loaded_objects: {loaded_objects}")
-        self.components = loaded_objects
+            data_objects = [x for x in self.config.data_objects if x.config_namespace == plugin.config_namespace]
+            if len(data_objects) > 0:
+                for obj in data_objects:
+                    self.components.append(obj.classref(parent=self, config_data=obj.config_data))
+            else: # Create a new object with no configuration data
+                self.components.append(plugin(parent=self))
 
     @property
     def config(self):
@@ -67,9 +77,11 @@ class Component(Plugin, class_type="base"):
         _config:           A new Config() object created by configure().
     """
 
+    # The name of 'Component's plugin namespace. Each component needs to overload this.
+    # TODO: maybe move this to the outer file itself and not in the classes?
     plugin_namespace = "palvella.lib.instance"
     #config_namespace = "instance"
-    config_data = {}
+    config_data = {}  # Each component gets an empty config_data by default
     _pre_plugins_ref_name = "__pre_plugins__"
 
     def __init__(self, **kwargs):
@@ -80,13 +92,13 @@ class Component(Plugin, class_type="base"):
             parent: A reference to the parent Instance() object
             config_data: A dict of key=value pairs loaded from Config.parse().
         """
-
         super().__init__(**kwargs)
 
-        # For each module, load a 'config.yaml' file if one exists, to act as the
+        # For each module, load a 'config.yaml' file if one exists, to fill in
         # default configuration data. Configuration data passed to the object in
         # the 'config_data' attribute will overload this.
-        with importlib_resources.as_file( importlib_resources.files(self.__module__).joinpath('config.yaml') ) as filename:
+        config_yaml_file = importlib_resources.files(self.__module__).joinpath('config.yaml')
+        with importlib_resources.as_file(config_yaml_file) as filename:
             if Path(filename).exists():
                 with open(filename, "r", encoding="utf-8") as fd:
                     self._config_data_defaults = YAML(typ='safe').load(fd)
@@ -96,6 +108,7 @@ class Component(Plugin, class_type="base"):
                 if not k in self.config_data:
                     self.config_data[k] = v
 
+        # Run the '_pre_plugins_ref_name' function if it was defined by a subclass
         if self._pre_plugins_ref_name != None and hasattr(self, self._pre_plugins_ref_name):
             if callable(getattr(self, self._pre_plugins_ref_name)):
                 getattr(self, self._pre_plugins_ref_name)()
@@ -103,9 +116,20 @@ class Component(Plugin, class_type="base"):
     def get_component(self, dep):
         self._logger.debug(f"get_component({self}, {dep})")
         self._logger.debug(f"self.parent.plugins {self.parent.plugins}")
-        results = self.parent.plugins.get_class_dependencies([dep])
+        objects = self.parent.components
+        self._logger.debug(f"objects: {objects}")
+        results = match_class_dependencies(self, objects, [dep])
         self._logger.debug(f"results: {results}")
         return results
+
+
+@dataclass(unsafe_hash=True)
+class ConfigDataObject:
+    config_namespace = None
+    classref = None
+    config_data = None
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
 
 
 class Config:
@@ -140,29 +164,33 @@ class Config:
         raise ValueError("No configuration provided")
 
     def get_data_objects(self):
-        """Parse configuration data and create new objects in current instance.
-
-        For each root key:value, look for a subclass of type 'plugin_base' that has a
-        'config_namespace' attribute whose value is the same as the root key.
-        Append the subclass and the value to 'self.parsed_components'.
         """
+        Parse configuration data. Return a dict consisting of ConfigDataObject() instances.
 
-        # We don't need to do the whole loading of plugins yet, we just need
-        # to import all the modules to load all the subclasses.
+        For each key:value (in the root of 'self.data'), look for a subclass of type 'plugin_base'
+        that has a 'config_namespace' attribute whose value is the same as the root key.
+        Create an object of that and return a list of them.
+        """
+        objects = []
+
+        # Load plugins to get subclasses
         self.parent.plugins
         subclasses = self.parent.subclasses
 
-        objects = defaultdict(list)
         for datarootkey, datarootval in self.data.items():
             for subclass in [x for x in subclasses if x.class_type == "plugin"]:
-                # The subclass must have an attribute 'config_namespace', whose value is the name
-                # of the data root key.
                 if not hasattr(subclass, 'config_namespace'):
                     continue
                 if datarootkey != subclass.config_namespace:
                     continue
                 assert (type(datarootval) is type([])), f"Configuration data entry '{datarootkey}' value must be a list"
                 for val in datarootval:
-                    objects[datarootkey].append({"class": subclass, "config_data": val})
+                    objects.append( ConfigDataObject(
+                        config_namespace=datarootkey,
+                        classref=subclass,
+                        config_data=val
+                    )
+                )
+
         return objects
 

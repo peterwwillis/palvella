@@ -25,8 +25,10 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
 
     async def publish(self, *, queue, **kwargs):
         """Publish a dict (kwargs) to the message queue as a JSON document."""
-        newdict = {"queue":queue} + kwargs
-        self.sock.send(json.dumps(newdict))
+        queuedict = {"queue": queue}
+        newdict = {**queuedict, **kwargs}
+        bytesobj = json.dumps(newdict).encode()
+        self.sock.send(bytesobj)
 
     async def consume(self, *, queue, **kwargs):
         """Consume a message from a queue."""
