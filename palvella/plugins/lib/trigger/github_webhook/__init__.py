@@ -39,13 +39,13 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         """
 
         fastapi = self.get_component(self.fastapi_dependency)
-        self._logger.debug(f"fastapi {fastapi}")
+        #self._logger.debug(f"fastapi {fastapi}")
 
         # TODO: For each configured webhook, create a new instance with its
         #       own configuration (endpoint name, secret, repo, etc)
         for obj in fastapi:
             obj.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
-        self._logger.debug("Done webhook install")
+        #self._logger.debug("Done webhook install")
 
     async def get_digest(self, request):
         """Return message digest if a secret key was provided."""

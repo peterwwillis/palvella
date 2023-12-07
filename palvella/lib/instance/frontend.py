@@ -8,4 +8,4 @@ class Frontend(Component, class_type="plugin_base"):
     """The 'Frontend' plugin class."""
 
     plugin_namespace = "palvella.plugins.lib.frontend"
-    config_namespace = "frontend"
+    component_namespace = "frontend"

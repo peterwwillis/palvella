@@ -8,4 +8,4 @@ class Engine(Component, class_type="plugin_base"):
     """The 'Engine' plugin class."""
 
     plugin_namespace = "palvella.plugins.lib.engine"
-    config_namespace = "engine"
+    component_namespace = "engine"

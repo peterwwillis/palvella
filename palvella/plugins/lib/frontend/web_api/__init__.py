@@ -21,12 +21,11 @@ class WebAPI(FastAPIPlugin, class_type="plugin", plugin_type=PLUGIN_TYPE):
         """Register API router and routes with the already-initialized FastAPI app."""
 
         fastapi = self.get_component(self.fastapi_dependency)
-        self._logger.debug(f"fastapi {fastapi}")
 
         web_api = APIRouter()
         web_api.add_api_route('/hello', endpoint=self.hello, methods=["GET"])
 
-        self._logger.debug("Including web_api router in FastAPI app")
+        #self._logger.debug("Including web_api router in FastAPI app")
         for obj in fastapi:
             obj.app.include_router(web_api)
 

@@ -8,7 +8,7 @@ class Action(Component, class_type="plugin_base"):
     """The 'Action' plugin class."""
 
     plugin_namespace = "palvella.plugins.lib.action"
-    config_namespace = "action"
+    component_namespace = "action"
 
     def run(self, **kwargs):
         """Run an action."""

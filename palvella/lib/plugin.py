@@ -20,7 +20,7 @@ class Plugin:
     depends_on = []
     class_type = None
     plugin_namespace = None
-    config_namespace = None
+    component_namespace = None
 
     def __init__(self, **kwargs):
         """Given a set of key=value pairs, update the object with those as attributes."""  # noqa
@@ -37,7 +37,7 @@ class Plugin:
 
     def load_plugins(self, **kwargs):
         """Discover and import all plugins, and return a WalkPlugins object."""
-        self._logger.debug(f"load_plugins({self}, {kwargs})")
+        #self._logger.debug(f"load_plugins({self}, {kwargs})")
         wp = self.walk_plugins(**kwargs)
         return wp
 
@@ -49,7 +49,7 @@ class Plugin:
         if not 'baseclass' in args:
             args['baseclass'] = self.__class__
         wp = WalkPlugins()
-        self._logger.debug(f"  walk_plugins({self}, {args})")
+        #self._logger.debug(f"  walk_plugins({self}, {args})")
         wp.walk_subclass(args['baseclass'])
         wp.add_graph_dependencies()
         return wp
@@ -94,26 +94,26 @@ def match_class_dependencies(self, objects, deps):
     """
     def matchParentClass(self, objects, dep):
             for match in objects:
-                self._logger.debug(f"  match {match}")
+                #self._logger.debug(f"  match {match}")
                 for parent in get_class(match).__bases__:
                     if dep.parentclass == parent.__name__:
-                        self._logger.debug(f"Found parent class {parent} in class of object {match}]")
+                        #self._logger.debug(f"Found parent class {parent} in class of object {match}]")
                         yield match
     def matchPluginType(self, objects, dep):
             for obj in [x for x in objects if x.plugin_type == dep.plugin_type]:
-                self._logger.debug(f"Found plugin_type {dep.plugin_type} for object {obj}")
+                #self._logger.debug(f"Found plugin_type {dep.plugin_type} for object {obj}")
                 yield obj
     results = []
     for dep in deps:
-        self._logger.debug(f"dep {dep}")
+        #self._logger.debug(f"dep {dep}")
         matches = objects[:]
-        self._logger.debug(f"matches: {matches}")
+        #self._logger.debug(f"matches: {matches}")
         if dep.parentclass != None:
             matches = matchParentClass(self, matches, dep)
         if dep.plugin_type != None:
             matches = matchPluginType(self, matches, dep)
         results += matches
-    self._logger.debug(f"found deps: {results}")
+    #self._logger.debug(f"found deps: {results}")
     return results
 
 @dataclass(unsafe_hash=True)
@@ -141,8 +141,8 @@ class WalkPlugins:
 
     def get_class_dependencies(self, deps):
         results = []
-        self._logger.debug(f"get_class_dependencies({self}, {deps})")
-        self._logger.debug(f"graph {self.class_graph}")
+        #self._logger.debug(f"get_class_dependencies({self}, {deps})")
+        #self._logger.debug(f"graph {self.class_graph}")
         return match_class_dependencies(self, self.classes, deps)
 
     def add_graph_dependencies(self):
@@ -161,10 +161,10 @@ class WalkPlugins:
            Store the classes found in 'self.classes'.
            Store a graph of class dependencies in 'self.class_graph'.
         """
-        self._logger.debug(f"  walk_subclass(self, {cls})")
+        #self._logger.debug(f"  walk_subclass(self, {cls})")
         self.load_plugin_modules(cls)
         self.classes += [cls]
-        self._logger.debug(f"  appended to self.classes {self.classes}")
+        #self._logger.debug(f"  appended to self.classes {self.classes}")
         subclasses = cls.__subclasses__()
         if len(subclasses) > 0:
             for x in subclasses:
@@ -185,7 +185,7 @@ class WalkPlugins:
         which is the name of a module to load. Loads that module and iterates over the namespace,
         yielding the name of modules in said namespace.
         """
-        self._logger.debug(f"      list_class_plugins({cls})")
+        #self._logger.debug(f"      list_class_plugins({cls})")
         if not hasattr(cls, 'plugin_namespace') or cls.plugin_namespace == None:
             self._logger.debug(f"        No 'plugin_namespace' found in class {cls}")
             yield
@@ -195,6 +195,6 @@ class WalkPlugins:
             else:
                 module = importlib.import_module(cls.plugin_namespace)
                 for _finder, name, _ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
-                    self._logger.debug(f"        Class {cls}: Found plugin '{name}'")
+                    #self._logger.debug(f"        Class {cls}: Found plugin '{name}'")
                     yield name, importlib.import_module(name)
                 self.searched_module_ns.append(cls.plugin_namespace)

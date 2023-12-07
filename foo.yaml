@@ -1,36 +1,39 @@
 
 trigger:
+  github_webhook:
     - name: "GitHub webhook"
-      type: "github_webhook"
       mq: "0mq-trigger-ghwh"
 
 mq:
+  zeromq:
     - name: "0mq-trigger-ghwh"
-      type: "zeromq"
       queue: "0mq-trigger-ghwh"
-      socket_type: "pubsub"
+      socket_type: "pushpull"
       url: "tcp://127.0.0.1:5680"
 
 db:
+  sqlite3:
     - name: "sqlite"
-      type: "sqlite3"
 
 engine:
+  local:
     - name: "local"
-      type: "local"
 
 job:
+  jobber:
     - name: "Terraform plan-approve-apply pipeline"
 
       engine:
-        name: "local"
+        local:
+          - name: "local"
 
       trigger:
-        name: "github_webhook"
-        repo:
-          name: "testing"
-          owner:
-            name: "octokitty"
+        github_webhook:
+          - name: "github_webhook"
+            repo:
+              name: "testing"
+              owner:
+                name: "octokitty"
 
       params:
         - name: "account"
@@ -41,7 +44,8 @@ job:
           description: "The environment to deploy Terraform in"
           type: "string"
           default: "nonprod"
+
       actions:
-        - name: "Terraform plan"
-          type: run
+        run:
+          - name: "Terraform plan"
 

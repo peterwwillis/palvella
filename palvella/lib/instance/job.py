@@ -14,7 +14,7 @@ class Job(Component, class_type="plugin_base"):
     """
 
     plugin_namespace = "palvella.plugins.lib.job"
-    config_namespace = "job"
+    component_namespace = "job"
     actions = []
 
     def run(self, **kwargs):

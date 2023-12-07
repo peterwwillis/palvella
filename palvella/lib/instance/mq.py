@@ -8,7 +8,7 @@ class MessageQueue(Component, class_type="plugin_base"):
     """The 'MessageQueue' plugin class."""
 
     plugin_namespace = "palvella.plugins.lib.mq"
-    config_namespace = "mq"
+    component_namespace = "mq"
 
     async def publish(self, *, name, queue, **kwargs):
         """Publish a message in a message queue."""
