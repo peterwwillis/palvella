@@ -38,13 +38,32 @@ class Trigger(Component, class_type="plugin_base"):
         return await self._run_mq_func('consume', queue=queue, **kwargs)
 
     async def _run_mq_func(self, function_name, *, queue="trigger", **kwargs):
+        results = []
         self._logger.debug(f"Trigger._run_mq_func({self}, function_name={function_name}, queue=\"{queue}\", {kwargs})")
 
-        mq = self.get_component(self.zeromq_dependency)
-        results = []
-        for obj in mq:
-            if not hasattr(obj, function_name):
-                raise Exception("object {obj} does not have function {function_name}")
-            func = getattr(obj, function_name)
+        mq_components = self.get_component(self.zeromq_dependency)
+        self._logger.debug(f"mq_components: {mq_components}")
+
+        mq_name = None
+        if 'mq' in self.config_data:
+            mq_name = self.config_data['mq']
+            self._logger.debug(f"mq_name: {mq_name}")
+
+        mq = []
+        for component in mq_components:
+            if mq_name != None:
+                if component.name == mq_name:
+                    self._logger.debug(f"Component {component} matched name, added")
+                    mq.append(component) 
+            else:
+                self._logger.debug(f"Component {component} added")
+                mq.append(component)
+
+        for mq_instance in mq:
+            if not hasattr(mq_instance, function_name):
+                raise Exception("object {mq_instance} does not have function {function_name}")
+            func = getattr(mq_instance, function_name)
+            self._logger.debug(f"running {func}")
             results.append( await func( queue=queue, **kwargs) )
+
         return results

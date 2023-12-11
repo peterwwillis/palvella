@@ -10,10 +10,10 @@ class MessageQueue(Component, class_type="plugin_base"):
     plugin_namespace = "palvella.plugins.lib.mq"
     component_namespace = "mq"
 
-    async def publish(self, *, name, queue, **kwargs):
+    async def publish(self, *, queue, **kwargs):
         """Publish a message in a message queue."""
-        self._logger.debug(f"MessageQueue.publish({self}, name=\"{name}\", queue=\"{queue}\", {kwargs})")
+        self._logger.debug(f"MessageQueue.publish({self}, queue=\"{queue}\", {kwargs})")
 
-    async def consume(self, *, name, queue, **kwargs):
+    async def consume(self, *, queue, **kwargs):
         """Consume a message from a queue."""
-        self._logger.debug(f"MessageQueue.consume({self}, name=\"{name}\", queue=\"{queue}\", {kwargs})")
+        self._logger.debug(f"MessageQueue.consume({self}, queue=\"{queue}\", {kwargs})")

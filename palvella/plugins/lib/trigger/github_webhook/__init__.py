@@ -39,7 +39,8 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         """
 
         fastapi = self.get_component(self.fastapi_dependency)
-        #self._logger.debug(f"fastapi {fastapi}")
+
+        
 
         # TODO: For each configured webhook, create a new instance with its
         #       own configuration (endpoint name, secret, repo, etc)

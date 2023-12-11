@@ -15,32 +15,46 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
     """Class of the ZeroMQ message queue plugin. Inherits the MessageQueue class.
 
        Attributes of 'config_data':
-         url:           A URL for a socket to listen on. (ex. "tcp://127.0.0.1:5830")
-         socket_type:     Undocumented
+         name:              The name of this ZeroMQ instance
+         url:               A URL for a socket to listen on. (ex. "tcp://127.0.0.1:5830")
+         socket_type:       "push" or "pull"
+         sock:              The opened socket
     """
 
     socket_type = None
     sock = None
+    url = None
+    name = None
+
+    def __repr__(self):
+        return f"ZeroMQ(name={self.name},socket_type={self.socket_type},sock={self.sock},url={self.url})"
 
     def __pre_plugins__(self):
         self.context = zmq.asyncio.Context()
-        #if 'socket_type' in self.config_data:
-        #    self.socket_type = self.config_data['socket_type']
+        if 'name' in self.config_data:
+            self.name = self.config_data['name']
+        if 'socket_type' in self.config_data:
+            self.socket_type = self.config_data['socket_type']
+        assert ('url' in self.config_data), "'url' property required in config_data"
+        self.url = self.config_data['url']
 
     def _setup_socket(self):
         """Use 'url' and self.socket_type to configure a socket."""
-        assert ('url' in self.config_data), "'url' property required in config_data"
         if self.socket_type == "push":
+            self._logger.debug(f"{self}: Setting up self.sock.bind({self.url})")
             self.sock = self.context.socket(zmq.PUSH)
-            self.sock.bind(self.config_data['url'])
+            self.sock.bind(self.url)
         elif self.socket_type == "pull":
+            self._logger.debug(f"{self}: Setting up self.sock.connect({self.url})")
             self.sock = self.context.socket(zmq.PULL)
-            self.sock.connect(self.config_data['url'])
+            self.sock.connect(self.url)
         else:
             raise Exception("socket_type must be 'push' or 'pull'")
 
     async def publish(self, *, queue, **kwargs):
         """Publish a dict (kwargs) to the message queue as a JSON document."""
+        await super().publish(queue=queue, **kwargs)
+
         if not self.socket_type:    self.socket_type = "push"
         if not self.sock:           self._setup_socket()
 
@@ -54,9 +68,11 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
 
     async def consume(self, *, queue, **kwargs):
         """Consume a message from a queue."""
+        await super().consume(queue=queue, **kwargs)
+
         if not self.socket_type:    self.socket_type = "pull"
         if not self.sock:           self._setup_socket()
 
-        res = await self.sock.recv()
+        res = await self.sock.recv(copy=False)
         self._logger.debug(f"\n\nzmq: received message {res}\n\n")
         return res
