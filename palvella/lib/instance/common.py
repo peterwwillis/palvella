@@ -50,16 +50,16 @@ class Instance(Plugin, class_type="base"):
         """
         self._logger.debug(f"instantiate_components()\n\n")
         plugin_classes = [x for x in self.plugins.topo_sort() if (x.class_type == "plugin")]
-        self._logger.debug(f"plugin_classes {plugin_classes}")
+        #self._logger.debug(f"plugin_classes {plugin_classes}")
         for cls in plugin_classes:
             data_objects = self.config.data_objects.get(classref=cls)
-            self._logger.debug(f"  cls {cls} data_objects {data_objects}")
+            #self._logger.debug(f"  cls {cls} data_objects {data_objects}")
             if len(data_objects) > 0:
                 for obj in data_objects:
-                    self._logger.debug(f"      creating component object from object {obj}")
+                    #self._logger.debug(f"      creating component object from object {obj}")
                     self.components.append(obj.classref(parent=self, config_data=obj.config_data))
             else: # Create a new object with no configuration data
-                self._logger.debug(f"      creating plugin object from class {cls}")
+                #self._logger.debug(f"      creating plugin object from class {cls}")
                 self.components.append(cls(parent=self))
 
     @property

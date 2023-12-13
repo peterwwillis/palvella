@@ -9,7 +9,7 @@ _logger = makeLogger(__name__)
 async def main():
 
     inst = Instance(config_path="foo.yaml")
-    _logger.debug("done loading instance")
+    _logger.debug(f"done loading instance {inst}\n\n")
 
     # Infinite loop to wait for tasks to die and finally exit ourselves.
     # Without this, final task (this function) will not exit sanely on signals.
