@@ -20,9 +20,12 @@ class ReceiveAllTriggers(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
 
     async def receive_events(self):
         while True:
+            await asyncio.sleep(0.2)
             self._logger.debug(f"receive_events({self}): About to consume")
             #consume_res = await self.consume()
             #gathered = asyncio.gather(consume_res)
             gathered = await asyncio.gather( self.consume() )
-            frame = gathered[0][0]
-            self._logger.debug(f"receive_events({self}): got msg {frame}")
+            frames = gathered[0][0]
+            self._logger.debug(f"receive_events({self}): got msg {frames}")
+            for frame in frames:
+                self._logger.debug(f"  frame {frame}")

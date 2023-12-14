@@ -11,6 +11,7 @@ this plugin, which will start the Uvicorn server.
 
 import asyncio
 import os
+from dataclasses import dataclass
 
 # These are later imported by other plugins
 from fastapi import (APIRouter, FastAPI, Request,  # noqa: F401,PLW406,PLW611
@@ -60,4 +61,37 @@ class FastAPIPlugin(Frontend, class_type="plugin", plugin_type=PLUGIN_TYPE):
         config.bind = "127.0.0.1:8000"
         config.loglevel = "INFO"
         asyncio.create_task(hyperserve(self.app, config))
+
+    @staticmethod
+    def get_header(request, key):
+        """Return message header."""
+        try:
+            return request.headers.get(key)
+        except KeyError:
+            return JSONResponse('{"error": "Missing header: ' + key + '"}', status_code=400)
+
+    @staticmethod
+    async def fastapi_data(request):
+        @dataclass
+        class FastAPIData(FastAPI):
+            _json = None
+            def __init__(self, request):
+                self._content_type = FastAPIPlugin.get_header(request, "content-type")
+                self._request = request
+            @property
+            async def body(self):
+                return await self._request.body()
+            @property
+            async def json(self):
+                if self._json: return self._json
+                if self._content_type == "application/json":
+                    self._json = await request.json()
+                    if self._json is None:
+                        return JSONResponse({"error": "Request body must contain json"}, status_code=400)
+                else:
+                    raise Exception(f"error: content_type '{self._content_type}' not implemented")
+                    return Response(status_code=500)
+                return self._json
+        dataobj = FastAPIData(request)
+        return dataobj
 

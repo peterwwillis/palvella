@@ -17,7 +17,7 @@ from starlette.responses import JSONResponse, Response
 
 from palvella.lib.plugin import PluginDependency
 from palvella.lib.instance.trigger import Trigger
-from palvella.plugins.lib.frontend.fastapi import Request
+from palvella.plugins.lib.frontend.fastapi import Request, FastAPIPlugin
 
 PLUGIN_TYPE = "github_webhook"
 
@@ -25,7 +25,7 @@ PLUGIN_TYPE = "github_webhook"
 class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
     """Class of the GitHub Webhook trigger. Inherits the Trigger class."""
 
-    _secret = None
+    secret = None
 
     fastapi_dependency = PluginDependency(parentclass="Frontend", plugin_type="fastapi")
     depends_on = [ fastapi_dependency ]
@@ -38,9 +38,11 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         a new object (of this class). Maps the HTTP endpoint in FastAPI to serve this function.
         """
 
-        fastapi = self.get_component(self.fastapi_dependency)
+        for x in ['secret']:
+            if x in self.config_data:
+                setattr(self, x, self.config_data[x])
 
-        
+        fastapi = self.get_component(self.fastapi_dependency)
 
         # TODO: For each configured webhook, create a new instance with its
         #       own configuration (endpoint name, secret, repo, etc)
@@ -48,54 +50,39 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
             obj.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
         #self._logger.debug("Done webhook install")
 
-    async def get_digest(self, request):
+    async def get_digest(self, data, hashfunc):
         """Return message digest if a secret key was provided."""
-        if self._secret:
-            return hmac.new(self._secret, request.data, hashlib.sha1).hexdigest()
+        if self.secret:
+            hmacobj = hmac.new(self.secret.encode(), data, hashfunc)
+            digest = hmacobj.hexdigest()
+            return digest
         return None
-
-    @staticmethod
-    def get_header(request, key):
-        """Return message header."""
-        try:
-            return request.headers.get(key)
-        except KeyError:
-            return JSONResponse('{"error": "Missing header: ' + key + '"}', status_code=400)
 
     async def github_webhook(self, request: Request):
         """FastAPI route to handle /github_webhook endpoint."""  # noqa
 
-        sig = self.get_header(request, "X-Hub-Signature")
-        hook_id = self.get_header(request, "X-Github-Hook-Id")
-        delivery = self.get_header(request, "X-Github-Delivery")
-        event_type = self.get_header(request, "X-Github-Event")
-        content_type = self.get_header(request, "content-type")
+        data = await FastAPIPlugin.fastapi_data(request)
 
-        digest = await self.get_digest(request)
+        sig = FastAPIPlugin.get_header(request, "X-Hub-Signature-256")
+        hook_id = FastAPIPlugin.get_header(request, "X-Github-Hook-Id")
+        delivery = FastAPIPlugin.get_header(request, "X-Github-Delivery")
+        event_type = FastAPIPlugin.get_header(request, "X-Github-Event")
+        content_type = FastAPIPlugin.get_header(request, "content-type")
+
+        digest = await self.get_digest(await data.body, hashfunc=hashlib.sha256)
         if digest is not None:
-            self._logger.debug(f"sig: '{sig}'")
-            sig_parts = sig.split("=", 1)
-            self._logger.debug(f"sig_parts '{sig_parts}' digest '{digest}'")
-            if len(sig_parts) < 2 or sig_parts[0] != "sha1" \
-               or not hmac.compare_digest(sig_parts[1], digest):
+            #self._logger.debug(f"sig '{sig}' digest '{digest}'")
+            if not hmac.compare_digest(sig, digest):
                 self._logger.debug("github_webhook: invalid signature")
                 return JSONResponse({"error": "Invalid signature"}, status_code=400)
 
-        if content_type == "application/json":
-            data = await request.json()
-        else:
-            self._logger.debug(f"github_webhook: error: content_type '{content_type}' not implemented")
-            return Response(status_code=500)
-
-        if data is None:
-            return JSONResponse({"error": "Request body must contain json"}, status_code=400)
-
-        self._logger.info(f"event_type:{event_type} data:{data} ({delivery})")
-
         # MessageQueue: Publish this message to the message queue as specified in
         #               the configuration for this webhook.
+        jsondata = await data.json
         await self.publish(
-            event_type=event_type, hook_id=hook_id, delivery=delivery, data=data
+            {"identity": self.plugin_namespace + "/" + "github_webhook"},
+            {"event_type": event_type, "hook_id": hook_id, "delivery": delivery},
+            jsondata
         )
 
         # For 204 status code, you *MUST NOT* use a JSONResponse or HTTPResponse,
