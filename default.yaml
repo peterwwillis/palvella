@@ -2,18 +2,18 @@
 trigger:
   github_webhook:
     - name: "GitHub webhook"
-      mq: "0mq-trigger-push"
+      mq: "default-trigger-push"
       secret: "testsecret"
   receive_all:
     - name: "Receive webhook pushes"
-      mq: "0mq-trigger-pull"
+      mq: "default-trigger-pull"
 
 mq:
   zeromq:
-    - name: "0mq-trigger-push"
+    - name: "default-trigger-push"
       socket_type: "push"
       url: "tcp://127.0.0.1:5680"
-    - name: "0mq-trigger-pull"
+    - name: "default-trigger-pull"
       socket_type: "pull"
       url: "tcp://127.0.0.1:5680"
 

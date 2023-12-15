@@ -25,6 +25,7 @@ PLUGIN_TYPE = "github_webhook"
 class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
     """Class of the GitHub Webhook trigger. Inherits the Trigger class."""
 
+    name = None
     secret = None
 
     fastapi_dependency = PluginDependency(parentclass="Frontend", plugin_type="fastapi")
@@ -38,7 +39,7 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         a new object (of this class). Maps the HTTP endpoint in FastAPI to serve this function.
         """
 
-        for x in ['secret']:
+        for x in ['name', 'secret']:
             if x in self.config_data:
                 setattr(self, x, self.config_data[x])
 
@@ -48,7 +49,6 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         #       own configuration (endpoint name, secret, repo, etc)
         for obj in fastapi:
             obj.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
-        #self._logger.debug("Done webhook install")
 
     async def get_digest(self, data, hashfunc):
         """Return message digest if a secret key was provided."""
@@ -80,7 +80,6 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         #               the configuration for this webhook.
         jsondata = await data.json
         await self.publish(
-            {"identity": self.plugin_namespace + "/" + "github_webhook"},
             {"event_type": event_type, "hook_id": hook_id, "delivery": delivery},
             jsondata
         )

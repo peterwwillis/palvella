@@ -1,7 +1,6 @@
 
 """The library for triggers. Defines plugin class and some base functions."""
 
-from palvella.lib.plugin import PluginDependency
 from palvella.lib.instance import Component
 from palvella.lib.instance.mq import MessageQueue
 
@@ -15,8 +14,7 @@ class Trigger(Component, class_type="plugin_base"):
         component_namespace:    The namespace in config files for plugins of this class.
     """
 
-    mq_dependency = PluginDependency(parentclass="MessageQueue")
-    depends_on = [ mq_dependency ]
+    name = None  # A default for child plugins
 
     plugin_namespace = "palvella.plugins.lib.trigger"
     component_namespace = "trigger"
@@ -25,10 +23,10 @@ class Trigger(Component, class_type="plugin_base"):
         """
         Publish a trigger event to any Message Queues attached to 'self'.
         """
-        return await MessageQueue.run_mq_function(self, self.mq_dependency, 'publish', *args)
+        return await MessageQueue.run_func(self, *args, func="publish")
 
     async def consume(self, *args):
         """
         Consume a trigger from the Message Queue.
         """
-        return await MessageQueue.run_mq_function(self, self.mq_dependency, 'consume', *args)
+        return await MessageQueue.run_func(self, *args, func="consume")

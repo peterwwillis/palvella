@@ -3,6 +3,7 @@
 
 import importlib
 import pkgutil
+import functools
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -62,7 +63,6 @@ class Plugin:
     @plugins.setter
     def plugins(self, value=None):
         self._plugins = value
-
 
 
 class PluginDependency:

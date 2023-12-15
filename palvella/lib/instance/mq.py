@@ -2,6 +2,7 @@
 """The library for message queues. Defines plugin class and some base functions."""
 
 from palvella.lib.instance import Component
+from palvella.lib.plugin import PluginDependency
 
 
 class MessageQueue(Component, class_type="plugin_base"):
@@ -19,54 +20,22 @@ class MessageQueue(Component, class_type="plugin_base"):
         #self._logger.debug(f"MessageQueue.consume({self}, {args})")
 
     @staticmethod
-    async def find_mq_object(obj, dependencies):
-        """
-        Given a plugin object, look up any loaded MessageQueue components.
-        Also within the plugin object, look for an 'mq' section in the 'config_data' attribute.
-        Return any objects with the same name as the 'mq' section, or if there's no
-        'mq' section at all, return all loaded MessageQueue objects.
-        """
+    async def run_func(obj, *args, func=None, **kwargs):
+        my_name = None if not hasattr(obj, 'name') else obj.name
+        obj_args = [{"name": my_name, "plugin_namespace": obj.plugin_namespace, "plugin_type": obj.plugin_type}]
+        my_args = [*obj_args, *args]
 
-        mq_components = obj.get_component(dependencies)
-        obj._logger.debug(f"mq_components: {mq_components}")
-
-        mq_name = None
-        if 'mq' in obj.config_data:
-            mq_name = obj.config_data['mq']
-            obj._logger.debug(f"mq_name: {mq_name}")
-
-        mq = []
-        for component in mq_components:
-            if mq_name != None:
-                if component.name == mq_name:
-                    obj._logger.debug(f"Component {component} matched name, added")
-                    mq.append(component)
-            else:
-                obj._logger.debug(f"Component {component} added")
-                mq.append(component)
-        return mq
-
-    @staticmethod
-    async def run_mq_function(obj, dependencies, function_name, *args):
-        """
-        Run a message queue function for a plugin.
-
-        Pass a plugin object 
-
-        If the plugin has a 'config_data' attribute with an 'mq' key, the value is considered
-        the name of a loaded MessageQueue object to use. That object is used to send and receive
-        MessageQueue items.
-        """
+        plugin_dep = PluginDependency(parentclass="MessageQueue")
+        plugin_components = obj.get_component(plugin_dep)
+        obj._logger.debug(f"plugin_components: {plugin_components}")
 
         results = []
-        obj._logger.debug(f"run_mq_function({obj}, function_name={function_name}, {args})")
-
-        mq = await MessageQueue.find_mq_object(obj, dependencies)
-        for mq_instance in mq:
-            if not hasattr(mq_instance, function_name):
-                raise Exception("object {mq_instance} does not have function {function_name}")
-            func = getattr(mq_instance, function_name)
-            obj._logger.debug(f"running {func}")
-            results.append( await func( *args) )
-
+        obj_mq_name = obj.config_data['mq']
+        mq_objs = [x for x in plugin_components if x.name == obj_mq_name]
+        for component in mq_objs:
+            if not hasattr(component, func):
+                raise Exception("object {component} does not have function {func}")
+            funcref = getattr(component, func)
+            obj._logger.debug(f"running {funcref}")
+            results.append( await funcref(*my_args, **kwargs) )
         return results
