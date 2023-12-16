@@ -39,7 +39,6 @@ class Plugin:
     def walk_plugins(self):
         # TODO: FIXME: currently if this is run from Instance(), it will result in duplicate
         # entries in wp.classes. Fix this?
-        self._logger.debug(f"walk_plugins: {self}")
         if hasattr(self, 'walk_plugins_args'):
             args = self.walk_plugins_args
         if not 'baseclass' in args:
@@ -64,13 +63,23 @@ class PluginDependency:
     """A class to declare what dependency (on another class/plugin) a plugin has.
 
        Attributes:
-            parentclass:    The name of a class which should be the parent class of the class we want to find.
-            plugin_type:    The 'plugin_type' attribute of the class we want to find.
+            classname:          The name of a class we want to find.
+            parentclassname:    The name of a parent of the class we want to find.
+            plugin_type:        The 'plugin_type' attribute of the class we want to find.
     """
-    parentclass = None
+    classname = None
+    parentclassname = None
     plugin_type = None
     def __init__(self, **kwargs):
+        for k,v in kwargs.items():
+            if k in ("classname", "parentclassname", "plugin_type"):
+                if type(v) != type(""):
+                    raise Exception("Error: type(%s) must be type %s" % (k, type("")) )
         self.__dict__.update(kwargs)
+    def __repr__(self):
+        return f"<PluginDependency(classname={self.classname},"\
+                f"parentclassname={self.parentclassname},"\
+                f"plugin_type={self.plugin_type})>"
 
 
 def get_class(obj):
@@ -93,17 +102,22 @@ def match_class_dependencies(self, objects, deps):
 def match_class_dependencies_wrapper(self, objects, deps):
     """Implementation of match_class_dependencies()"""
     def matchParentClass(self, objects, dep):
-            for match in objects:
-                for parent in get_class(match).__bases__:
-                    if dep.parentclass == parent.__name__:
-                        yield match
+        for match in objects:
+            for parent in get_class(match).__bases__:
+                if dep.parentclassname == parent.__name__:
+                    yield match
+    def matchClass(self, objects, dep):
+        for obj in [x for x in objects if x.__name__ == dep.classname]:
+            yield obj
     def matchPluginType(self, objects, dep):
-            for obj in [x for x in objects if x.plugin_type == dep.plugin_type]:
-                yield obj
+        for obj in [x for x in objects if x.plugin_type == dep.plugin_type]:
+            yield obj
     results = []
     for dep in deps:
         matches = objects[:]
-        if dep.parentclass != None:
+        if dep.classname != None:
+            matches = matchClass(self, matches, dep)
+        if dep.parentclassname != None:
             matches = matchParentClass(self, matches, dep)
         if dep.plugin_type != None:
             matches = matchPluginType(self, matches, dep)

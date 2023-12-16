@@ -88,9 +88,11 @@ class Component(Plugin, class_type="base"):
     that function will be run at the end of '__init__' in this object.
 
     Attributes:
-        plugin_namespace: The namespace for this plugin module.
-        component_namespace: The namespace for configuration files relevant to this plugin.
-        _config:           A new Config() object created by configure().
+        name:                   The name of the particular instance of this component.
+        plugin_namespace:       The namespace for this plugin module.
+        component_namespace:    The namespace for configuration files relevant to this plugin.
+        config_data:            A dict of configuration data for this instance of this component.
+        schema:                 A pointer to a schema to validate the configuration with.
     """
 
     # The name of 'Component's plugin namespace. Each component needs to overload this.
@@ -101,6 +103,7 @@ class Component(Plugin, class_type="base"):
     config_data = {}  # Each component gets an empty config_data by default
     schema = True
     _pre_plugins_ref_name = "__pre_plugins__"
+    name = None
 
 
     _logger = makeLogger(__module__ + "/Config")
@@ -175,7 +178,7 @@ class Component(Plugin, class_type="base"):
         """
         for plugin_type, config_data in data.items():
             assert (type(config_data) == type([])), f"Configuration entries for '{plugin_type}' must be in list format"
-            dep = PluginDependency(plugin_type=plugin_type)
+            dep = PluginDependency(parentclassname=cls.__name__, plugin_type=plugin_type)
             for x in match_class_dependencies(cls, cls.__subclasses__(), [dep]):
                 for entry in config_data:
                     yield ConfigDataObject(classref=x, config_data=entry)
