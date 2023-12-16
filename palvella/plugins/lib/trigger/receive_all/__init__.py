@@ -26,6 +26,9 @@ class ReceiveAllTriggers(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
             #gathered = asyncio.gather(consume_res)
             gathered = await asyncio.gather( self.consume() )
             frames = gathered[0][0]
-            self._logger.debug(f"receive_events({self}): got msg {frames}")
-            for frame in frames:
-                self._logger.debug(f"  frame {frame}")
+            if len(frames) == 0:
+                return
+            if len(frames) == 2:
+                self._logger.debug(f"receive_events({self}): only identity frame found ({frames[0]})")
+                return
+            identity, msgs = frames[0], frames[1:]

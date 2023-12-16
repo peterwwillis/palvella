@@ -3,7 +3,7 @@
 
 import importlib
 import pkgutil
-import functools
+from functools import lru_cache
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -36,15 +36,10 @@ class Plugin:
         super().__init_subclass__(**kwargs)
         cls.subclasses.append(cls)
 
-    def load_plugins(self, **kwargs):
-        """Discover and import all plugins, and return a WalkPlugins object."""
-        #self._logger.debug(f"load_plugins({self}, {kwargs})")
-        wp = self.walk_plugins(**kwargs)
-        return wp
-
-    def walk_plugins(self, args=None):
+    def walk_plugins(self):
         # TODO: FIXME: currently if this is run from Instance(), it will result in duplicate
         # entries in wp.classes. Fix this?
+        self._logger.debug(f"walk_plugins: {self}")
         if hasattr(self, 'walk_plugins_args'):
             args = self.walk_plugins_args
         if not 'baseclass' in args:
@@ -58,7 +53,7 @@ class Plugin:
     @property
     def plugins(self):
         if self._plugins == None:
-            self.plugins = self.load_plugins()
+            self.plugins = self.walk_plugins()
         return self._plugins
     @plugins.setter
     def plugins(self, value=None):
@@ -92,28 +87,27 @@ def match_class_dependencies(self, objects, deps):
 
        Returns the matching classes/instances.
     """
+    # Wrap the list arguments with tuples so that it's hashable for @lru_cache
+    return match_class_dependencies_wrapper(self, tuple(objects), tuple(deps))
+@lru_cache
+def match_class_dependencies_wrapper(self, objects, deps):
+    """Implementation of match_class_dependencies()"""
     def matchParentClass(self, objects, dep):
             for match in objects:
-                #self._logger.debug(f"  match {match}")
                 for parent in get_class(match).__bases__:
                     if dep.parentclass == parent.__name__:
-                        #self._logger.debug(f"Found parent class {parent} in class of object {match}]")
                         yield match
     def matchPluginType(self, objects, dep):
             for obj in [x for x in objects if x.plugin_type == dep.plugin_type]:
-                #self._logger.debug(f"Found plugin_type {dep.plugin_type} for object {obj}")
                 yield obj
     results = []
     for dep in deps:
-        #self._logger.debug(f"dep {dep}")
         matches = objects[:]
-        #self._logger.debug(f"matches: {matches}")
         if dep.parentclass != None:
             matches = matchParentClass(self, matches, dep)
         if dep.plugin_type != None:
             matches = matchPluginType(self, matches, dep)
         results += matches
-    #self._logger.debug(f"found deps: {results}")
     return results
 
 @dataclass(unsafe_hash=True)
@@ -139,19 +133,14 @@ class WalkPlugins:
         ts = graphlib.TopologicalSorter(graph)
         return tuple(ts.static_order())
 
-    def get_class_dependencies(self, deps):
-        results = []
-        #self._logger.debug(f"get_class_dependencies({self}, {deps})")
-        #self._logger.debug(f"graph {self.class_graph}")
-        return match_class_dependencies(self, self.classes, deps)
-
     def add_graph_dependencies(self):
         """Locate classes based on some dependency meta-criteria and add the dependency to 'self.class_graph'.
 
         """
         for cls in self.classes:
-            classes = self.get_class_dependencies(cls.depends_on)
-            for _class in classes:
+            if len(cls.depends_on) < 1:
+                continue
+            for _class in match_class_dependencies(self, self.classes, cls.depends_on):
                 if not _class in self.class_graph[cls]:
                     self.class_graph[cls].append(_class)
 

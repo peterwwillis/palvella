@@ -25,13 +25,15 @@ engine:
   local:
     - name: "local"
 
-job:
-  jobber:
+actions:
+  run:
+    - name: "run"
+
+jobs:
+  default:
     - name: "Terraform plan-approve-apply pipeline"
 
-      engine:
-        local:
-          - name: "local"
+      engine: "local"
 
       trigger:
         github_webhook:

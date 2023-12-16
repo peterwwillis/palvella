@@ -562,6 +562,7 @@ hypercorn = "^0.15.0"
 zmq = "^0.0.0"
 graphlib-backport = "^1.0.3"
 importlib-resources = "^6.1.1"
+jsonschema = "^4.20.0"
 
 
 [build-system]
