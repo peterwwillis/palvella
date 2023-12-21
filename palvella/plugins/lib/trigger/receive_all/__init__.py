@@ -31,4 +31,6 @@ class ReceiveAllTriggers(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
             if len(frames) == 2:
                 self._logger.debug(f"receive_events({self}): only identity frame found ({frames[0]})")
                 return
-            identity, msgs = frames[0], frames[1:]
+            identity, event, data = frames[0], frames[1], frames[2:]
+            await self.send_alert(identity, event, data)
+

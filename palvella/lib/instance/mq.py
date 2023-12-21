@@ -21,6 +21,9 @@ class MessageQueue(Component, class_type="plugin_base"):
 
     @staticmethod
     async def run_func(obj, *args, func=None, **kwargs):
+
+        # The first frame in the message will have the following structure.
+        # The intent is to identify what sent the message/the message context.
         my_name = None if not hasattr(obj, 'name') else obj.name
         obj_args = [{"name": my_name, "plugin_namespace": obj.plugin_namespace, "plugin_type": obj.plugin_type}]
         my_args = [*obj_args, *args]

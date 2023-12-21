@@ -487,6 +487,9 @@ Triggers enqueue messages in the Trigger MQ (Message Queue).
 
 Triggers may communicate through a REST API built into this server.
 
+The trigger's purpose is to communicate to a Job (or other component) that it should
+run, or give it information it may want.
+
 ##### 1.1 Initial trigger
 When a trigger is triggered, it records itself in the Trigger MQ and exits.
 

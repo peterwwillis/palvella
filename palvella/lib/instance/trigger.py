@@ -17,16 +17,12 @@ class Trigger(Component, class_type="plugin_base"):
     name = None  # A default for child plugins
 
     plugin_namespace = "palvella.plugins.lib.trigger"
-    component_namespace = "trigger"
+    component_namespace = "triggers"
 
     async def publish(self, *args):
-        """
-        Publish a trigger event to any Message Queues attached to 'self'.
-        """
+        """Publish a trigger event to any Message Queues attached to 'self'."""
         return await MessageQueue.run_func(self, *args, func="publish")
 
     async def consume(self, *args):
-        """
-        Consume a trigger from the Message Queue.
-        """
+        """Consume a trigger from the Message Queue."""
         return await MessageQueue.run_func(self, *args, func="consume")

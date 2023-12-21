@@ -9,73 +9,259 @@ from jsonschema import validate as jsonschema_validate
 from ruamel.yaml import YAML
 import importlib_resources
 
-from palvella.lib.plugin import Plugin, PluginDependency, match_class_dependencies
+from palvella.lib.plugin import Plugin, PluginDependency, WalkPlugins, match_class_dependencies
 
 from ..logging import makeLogger, logging
 
 
+_logger = makeLogger(__name__)
+
+
+@dataclass
+class ComponentHook:
+    component = None
+    hook_type = None
+    hook = None
+    match_data = None
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__, self.__dict__)
+
+
+class ComponentHooks:
+    """
+    Manages hooks for components.
+
+    Attributes:
+        parent:         A reference to the parent Instance() object.
+    """
+
+    _hooks = []
+
+    def __init__(self, parent):
+        self.parent = parent
+
+    def register_hook(self, component_ns, plugin_type, hook_type, hook, match_data):
+        """Run from a component, adds a hook for a particular function based on specific event type and data."""
+        dep = PluginDependency(component_namespace=component_ns, plugin_type=plugin_type)
+        _logger.debug(f"self {self} plugins {self.parent.plugins} dep {dep}")
+        components = match_class_dependencies(self, self.parent.plugins.classes, [dep])
+        for component in components:
+            self._hooks.append(ComponentHook(component=component, hook_type=hook_type, hook=hook, match_data=match_data))
+
+
+@dataclass(unsafe_hash=True)
+class ComponentObject:
+    classref = None
+    parent = None
+    config_data = None
+    error = None
+    _instance = None
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__, self.__dict__)
+    def instance(self):
+        if not self._instance:
+            self._instance = self.classref(parent=self.parent, config_data=self.config_data)
+        return self._instance
+
+
+class ComponentObjects:
+    """
+    A class to manage the 'component objects', which are configuration of a component before instances of it are created.
+
+    Attributes:
+        parent:     The parent Instance() object.
+        config:     A Config() object.
+    """
+
+    _config_objects = []  # The list of ComponentObject()s
+    _all_objects = []  # The list of ComponentObject()s
+    _instances = []  # The list of instantiated objects
+    _logger = makeLogger(__module__ + "/ComponentObjects")
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__, self.__dict__)
+
+    def __init__(self, parent, config):
+        self.parent = parent
+        self.config = config
+        self._config_objects = self.load_config_objects()
+        self._all_objects = self.load_topo_objects(self._config_objects)
+        for x in self.create_instances(self._all_objects):
+            self._instances.append(x)
+
+    def get_by_class(self, classref):
+        for x in self._objects:
+            if x.classref == classref:
+                yield x
+
+    def load_topo_objects(self, config_objects):
+        """
+        Walks the graph of all plugins of class_type 'plugin', sorted topologically 
+        (to handle dependencies first) and creates a list of objects to make instances of.
+        """
+        objects = []
+        # Get all classes
+        plugin_class_topo = [x for x in self.parent.plugins.topo_sort() if (x.class_type == "plugin")]
+        for cls in plugin_class_topo:
+            # Get component objects based on class
+            component_objects = [x for x in config_objects if x.classref == cls]
+            # Process the component objects that exist
+            if len(component_objects) > 0:
+                for obj in component_objects:
+                    self._logger.debug(f"Loading new component from object: {obj.classref}")
+                    objects.append(
+                        ComponentObject(classref=obj.classref, parent=self.parent, config_data=obj.config_data)
+                    )
+            # Otherwise create based on class, not component object
+            else:
+                self._logger.debug(f"Loading new component {cls}")
+                objects.append(
+                    ComponentObject(classref=cls, parent=self.parent)
+                )
+        return objects
+
+    def create_instances(self, objects):
+        for x in objects:
+            yield x.instance()
+
+    @property
+    def instances(self):
+        return self._instances
+
+    def load_config_objects(self):
+        """
+        Parse configuration data and set an internal list of ComponentObject()s.
+
+        For each key:value (in the root of 'self.data'),
+            look for a key that matches the 'component_namespace'
+            of a loaded plugin (of subclass_type 'plugin_base').
+
+        For each of those, have the class of the plugin validate its own configuration
+        and return objects as needed.
+        Set self._objects to the resulting set of objects.
+        """
+        objects = []
+        subclasses = self.parent.subclasses
+
+        for component_namespace, datarootval in self.config.data.items():
+            self._logger.debug(f"component_namespace {component_namespace}")
+
+            plugin_base = [x for x in subclasses if x.class_type == "plugin_base" \
+                           and x.component_namespace == component_namespace]
+            if len(plugin_base) < 1:
+                self._logger.debug(f"could not find plugin base for '{component_namespace}'")
+                continue
+            elif len(plugin_base) > 1:
+                self._logger.debug(f"too many plugin bases for '{component_namespace}'")
+                continue
+
+            self._logger.debug(f"plugin_base {plugin_base[0]}")
+
+            # Validate schema
+            plugin_base[0].validate_config_schema(datarootval)
+
+            # Allow the base plugin component to override this method
+            for newobj in plugin_base[0].plugin_base_config_objects(plugin_base[0], datarootval):
+                self._logger.debug(f"newobj {newobj}")
+                objects.append(newobj)
+
+        return objects
+
+    def plugin_base_config_objects(self, data):
+        """
+        Parse the configuration for a 'plugin_base' and return component objects based on it.
+
+        This class method is used to parse a chunk of configuration for a given 'plugin_base'
+        and return the ComponentObject()s that will turn into new instances of components.
+
+        Most 'plugin_base' data follows this format:
+            plugin_base_name:
+                plugin_type_name:
+                    - item1
+                    - item2
+
+        The intent being to return:
+            ComponentObject(classref=class_of_plugin_type_name, config_data=[item1])
+            ComponentObject(classref=class_of_plugin_type_name, config_data=[item2])
+
+        However, some 'plugin_base' may use a different configuration format. Those
+        'plugin_base' can override this method and return objects however they prefer.
+        """
+        for plugin_type, config_data in data.items():
+            assert (type(config_data) == type([])), f"Configuration entries for '{plugin_type}' must be in list format"
+            dep = PluginDependency(parentclassname=self.__name__, plugin_type=plugin_type)
+            import sys; print(f"self {self}", file=sys.stderr)
+            _logger.debug(f"plugin_type {plugin_type} config_data {config_data}")
+            _logger.debug(f"dep {dep}")
+            for x in match_class_dependencies(self, self.__subclasses__(), [dep]):
+                for entry in config_data:
+                    _logger.debug(f"yielding new component object")
+                    yield ComponentObject(classref=x, config_data=entry)
+
+
+class Config:
+    """A class to parse a configuration file and load it into a data structure."""
+
+    _config_path = None
+
+    def __init__(self, parent, config_path):
+        """Initialize new configuration.
+
+        Arguments:
+            parent:         A reference to the parent Instance() object
+            config_path:    A path to a YAML file to load configuration from.
+        """
+        self.parent = parent
+        self.config_path = config_path
+        self.load_config()
+
+    def load_config(self, config_path=None):
+        config_path = config_path if config_path != None else self.config_path
+        self.data = self.loadYamlFile(file=config_path)
+
+    def loadYamlFile(self, file):
+        """Load configuration, parse it, and return the result."""
+        with open(file, "r", encoding="utf-8") as f:
+            yaml = YAML(typ='safe')
+            return yaml.load(f)
+        raise ValueError("No configuration provided")
 
 
 class Instance(Plugin, class_type="base"):
     """The 'Instance' plugin class. Creates a new instance of the application."""
 
     plugin_namespace = "palvella.lib.instance"
-    _components = []  # The list of instantiated objects of each plugin
+
+    hooks = None
+    plugins = None
+    components = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.hooks = ComponentHooks(parent=self)
+
         # Load plugin subclasses from the 'Component' class
-        self.walk_plugins_args = { 'baseclass': Component }
+        self.plugins = WalkPlugins(Component)
 
         if hasattr(self, 'config_path'):
             self.config = Config(parent=self, config_path=self.config_path)
-        if self.config:
-            self.initialize()
+
+        self.initialize()
 
     def initialize(self):
         """Initialize the new instance."""
-        self.load_components()
-
-    @property
-    def components(self):
-        return self._components
-    @components.setter
-    def components(self, val):
-        self._components = val
-
-    def load_components(self):
-        """Instantiate new Component objects and append them (in real time) to self.components.
-
-           Walks the graph of all plugins of class_type 'plugin', sorted topologically 
-           (to handle dependencies first).
-
-           If there's a 'self.config.data_objects' entry for a given plugin, uses those
-           'data_objects' configuration to create a new instance of that plugin.
-
-           If no entry in 'data_objects', just creates a new instance of that plugin with
-           no configuration.
-
-           Each new object instance created is immediately appended to 'self.components',
-           so that the next component being added may look for previously created ones
-           (that they may depend on).
-        """
-        plugin_class_topo = [x for x in self.plugins.topo_sort() if (x.class_type == "plugin")]
-        for cls in plugin_class_topo:
-            data_objects = [x for x in self.config.data_objects.get_by_class(cls)]
-            # If there's plugin classes that have configured data objects:
-            if len(data_objects) > 0:
-                for obj in data_objects:
-                    self._logger.debug(f"Loading new component {obj.classref} from data_objects")
-                    self.components.append(obj.classref(parent=self, config_data=obj.config_data))
-            # Otherwise just create an object for this class with no configuration
-            else:
-                self._logger.debug(f"Loading new component {cls}")
-                self.components.append(cls(parent=self))
+        if self.config:
+            self.components = ComponentObjects(parent=self, config=self.config)
 
     @property
     def config(self):
         return self._config
+
     @config.setter
     def config(self, arg):
         self._config = arg
@@ -104,9 +290,6 @@ class Component(Plugin, class_type="base"):
     schema = True
     _pre_plugins_ref_name = "__pre_plugins__"
     name = None
-
-
-    _logger = makeLogger(__module__ + "/Config")
 
     def __init__(self, **kwargs):
         """
@@ -139,10 +322,6 @@ class Component(Plugin, class_type="base"):
             if callable(getattr(self, self._pre_plugins_ref_name)):
                 getattr(self, self._pre_plugins_ref_name)()
 
-    def get_component(self, dep):
-        results = match_class_dependencies(self, self.parent.components, [dep])
-        return results
-
     @classmethod
     def validate_config_schema(cls, data):
         """
@@ -155,125 +334,28 @@ class Component(Plugin, class_type="base"):
         """
         jsonschema_validate(data, cls.schema)
 
-    @classmethod
-    def plugin_base_config_objects(cls, data):
+    async def send_alert(self, *args, **kwargs):
+        mykwargs = {"hook_type": "event", "trigger_alert": True}
+        await self.send_event(args, {**kwargs, **mykwargs})
+
+    async def send_event(self, *args, **kwargs):
+        for hook in self.parent.hooks:
+            if hook.plugin_namespace == self.plugin_namespace \
+               and hook.plugin_type == self.plugin_type:
+                self.event_hook(hook)
+
+    def plugin_base_config_objects(self, data):
+        return ComponentObjects.plugin_base_config_objects(self, data)
+
+    def get_component(self, dep):
         """
-        Parse the configuration for a 'plugin_base' and return component objects based on it.
+        Pass a PluginDependency() and this function will return all of the
+        matching instances of components.
 
-        This class method is used to parse a chunk of configuration for a given 'plugin_base'
-        and return the ConfigDataObject()s that will turn into new instances of components.
-
-        Most 'plugin_base' configuration follows this format:
-            plugin_base_name:
-                plugin_type_name:
-                    - item1
-                    - item2
-
-        The intent being to return:
-            ConfigDataObject(classref=class_of_plugin_type_name, config_data=[item1])
-            ConfigDataObject(classref=class_of_plugin_type_name, config_data=[item2])
-
-        However, some 'plugin_base' may use a different configuration format. Those
-        'plugin_base' can override this method and return objects however they prefer.
+        This is used by plugins to find an instance of another plugin that they
+        may need to interact with, attach a hook to, etc.
         """
-        for plugin_type, config_data in data.items():
-            assert (type(config_data) == type([])), f"Configuration entries for '{plugin_type}' must be in list format"
-            dep = PluginDependency(parentclassname=cls.__name__, plugin_type=plugin_type)
-            for x in match_class_dependencies(cls, cls.__subclasses__(), [dep]):
-                for entry in config_data:
-                    yield ConfigDataObject(classref=x, config_data=entry)
-
-
-@dataclass(unsafe_hash=True)
-class ConfigDataObject:
-    classref = None
-    config_data = None
-    error = None
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-    def __repr__(self):
-        return (f"ConfigDataObject("
-                f"classref={self.classref},config_data={self.config_data}"
-                f",error={self.error})")
-
-
-class Config:
-    """A class to parse a configuration file and load it into a data structure."""
-
-    _logger = makeLogger(__module__ + "/Config")
-    _config_path = None
-
-
-    class DataObjects:
-
-        _objects = None
-
-        def __init__(self, configobj):
-            self.data_objects = configobj
-
-        def get_by_class(self, classref):
-            for x in self.data_objects:
-                if x.classref == classref:
-                    yield x
-
-        @property
-        def data_objects(self):
-            return self._objects
-
-        @data_objects.setter
-        def data_objects(self, configobj):
-            """
-            Parse configuration data and set an internal list of ConfigDataObject()s.
-
-            For each key:value (in the root of 'self.data'),
-                look for a key that matches the 'component_namespace'
-                of a loaded plugin (of subclass_type 'plugin_base').
-
-            For each of those, have the class of the plugin validate its own configuration
-            and return objects as needed.
-            Set self._objects to the resulting set of objects.
-            """
-            objects = []
-            configobj.parent.plugins  # Load plugins to get subclasses
-            subclasses = configobj.parent.subclasses
-
-            for component_namespace, datarootval in configobj.data.items():
-
-                plugin_base = [x for x in subclasses if x.class_type == "plugin_base" \
-                               and x.component_namespace == component_namespace]
-                if len(plugin_base) < 1:
-                    Config._logger.debug(f"could not find plugin base for '{component_namespace}'")
-                    continue
-                elif len(plugin_base) > 1:
-                    Config._logger.debug(f"too many plugin bases for '{component_namespace}'")
-                    continue
-
-                plugin_base[0].validate_config_schema(datarootval)
-                objects.extend( plugin_base[0].plugin_base_config_objects(datarootval) )
-
-            self._objects = objects
-
-    def __init__(self, **kwargs):
-        """Initialize new configuration.
-
-        Arguments:
-            parent: A reference to the parent Instance() object
-            load: A string which points at a YAML configuration file to load().
-        """
-        self.__dict__.update(kwargs)
-        self.load_config()
-
-    def load_config(self, config_path=None):
-        config_path = self.config_path if self.config_path else config_path
-        if config_path:
-            self.data = self.loadYamlFile(file=self.config_path)
-        if self.data:
-            self.data_objects = self.DataObjects(self)
-
-    def loadYamlFile(self, file):
-        """Load configuration, parse it, and return the result."""
-        with open(file, "r", encoding="utf-8") as f:
-            yaml = YAML(typ='safe')
-            return yaml.load(f)
-        raise ValueError("No configuration provided")
-
+        import time; time.sleep(3)
+        self._logger.debug(f"components: {self.parent.components}")
+        results = match_class_dependencies(self, self.parent.components.instances, [dep])
+        return results

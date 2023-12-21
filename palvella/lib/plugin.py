@@ -12,6 +12,9 @@ import graphlib  # our poetry requirements include the 'graphlib_backport' modul
 from .logging import makeLogger
 
 
+_logger = makeLogger(__name__)
+
+
 class Plugin:
     """The base class for plugins. Inherit this to make a new plugin class."""
     subclasses = []  # A list of all subclasses of this class
@@ -36,53 +39,32 @@ class Plugin:
         super().__init_subclass__(**kwargs)
         cls.subclasses.append(cls)
 
-    def walk_plugins(self):
-        # TODO: FIXME: currently if this is run from Instance(), it will result in duplicate
-        # entries in wp.classes. Fix this?
-        if hasattr(self, 'walk_plugins_args'):
-            args = self.walk_plugins_args
-        if not 'baseclass' in args:
-            args['baseclass'] = self.__class__
-        wp = WalkPlugins()
-        #self._logger.debug(f"  walk_plugins({self}, {args})")
-        wp.walk_subclass(args['baseclass'])
-        wp.add_graph_dependencies()
-        return wp
-
-    @property
-    def plugins(self):
-        if self._plugins == None:
-            self.plugins = self.walk_plugins()
-        return self._plugins
-    @plugins.setter
-    def plugins(self, value=None):
-        self._plugins = value
-
 
 class PluginDependency:
     """A class to declare what dependency (on another class/plugin) a plugin has.
 
        Attributes:
-            classname:          The name of a class we want to find.
-            parentclassname:    The name of a parent of the class we want to find.
-            plugin_type:        The 'plugin_type' attribute of the class we want to find.
+            classname:              The name of a class we want to find.
+            parentclassname:        The name of a parent of the class we want to find.
+            plugin_type:            The 'plugin_type' attribute of the class we want to find.
+            component_namespace:    The 'component_namespace' attribute of the class we want to find.
     """
     classname = None
     parentclassname = None
     plugin_type = None
+    component_namespace = None
     def __init__(self, **kwargs):
-        for k,v in kwargs.items():
-            if k in ("classname", "parentclassname", "plugin_type"):
-                if type(v) != type(""):
+        for k in ("classname", "parentclassname", "plugin_type","component_namespace"):
+            if k in kwargs:
+                if type(kwargs[k]) != type(""):
                     raise Exception("Error: type(%s) must be type %s" % (k, type("")) )
         self.__dict__.update(kwargs)
     def __repr__(self):
-        return f"<PluginDependency(classname={self.classname},"\
-                f"parentclassname={self.parentclassname},"\
-                f"plugin_type={self.plugin_type})>"
+        return "%s(%r)" % (self.__class__, self.__dict__)
 
 
 def get_class(obj):
+    """Return the class reference for either an instance of a class, or just the class reference"""
     if isinstance(obj, type):
         return obj
     return obj.__class__
@@ -96,6 +78,7 @@ def match_class_dependencies(self, objects, deps):
 
        Returns the matching classes/instances.
     """
+    _logger.debug(f"objects {objects}")
     # Wrap the list arguments with tuples so that it's hashable for @lru_cache
     return match_class_dependencies_wrapper(self, tuple(objects), tuple(deps))
 @lru_cache
@@ -112,6 +95,9 @@ def match_class_dependencies_wrapper(self, objects, deps):
     def matchPluginType(self, objects, dep):
         for obj in [x for x in objects if x.plugin_type == dep.plugin_type]:
             yield obj
+    def matchComponentNs(self, objects, dep):
+        for obj in [x for x in objects if x.component_namespace == dep.component_namespace]:
+            yield obj
     results = []
     for dep in deps:
         matches = objects[:]
@@ -121,12 +107,23 @@ def match_class_dependencies_wrapper(self, objects, deps):
             matches = matchParentClass(self, matches, dep)
         if dep.plugin_type != None:
             matches = matchPluginType(self, matches, dep)
+        if dep.component_namespace != None:
+            matches = matchComponentNs(self, matches, dep)
         results += matches
     return results
 
 @dataclass(unsafe_hash=True)
 class WalkPlugins:
-    """Manage the traversal of plugins and their classes."""
+    """
+    Manage the traversal of plugins and their classes.
+
+    Arguments:
+        baseclass:      A class to walk subclasses of and build a plugin graph of.
+
+    Attributes:
+        classes:        A list of classes discovered
+        class_graph:    A graph of classes and the subclasses dependent on them
+    """
 
     _logger = makeLogger(__module__ + "/WalkPlugins")
 
@@ -141,16 +138,23 @@ class WalkPlugins:
     # import, so we don't go over them again and again unnecessarily.
     searched_module_ns = []
 
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__, self.__dict__)
+
+    @lru_cache
+    def __init__(self, baseclass):
+        self.walk_subclass(baseclass)
+        self.add_graph_dependencies()
+
     def topo_sort(self, graph=None):
+        """Return a topologically sorted tuple of the graph of classes."""
         if graph == None:
             graph = self.class_graph
         ts = graphlib.TopologicalSorter(graph)
         return tuple(ts.static_order())
 
     def add_graph_dependencies(self):
-        """Locate classes based on some dependency meta-criteria and add the dependency to 'self.class_graph'.
-
-        """
+        """Locate classes based on some dependency meta-criteria and add the dependency to 'self.class_graph'."""
         for cls in self.classes:
             if len(cls.depends_on) < 1:
                 continue
@@ -159,10 +163,11 @@ class WalkPlugins:
                     self.class_graph[cls].append(_class)
 
     def walk_subclass(self, cls):
-        """Walk all modules and subclasses of class 'cls'.
+        """
+        Walk all modules and subclasses of class 'cls'.
 
-           Store the classes found in 'self.classes'.
-           Store a graph of class dependencies in 'self.class_graph'.
+        Stores the classes found in 'self.classes'.
+        Stores a graph of class dependencies in 'self.class_graph'.
         """
         #self._logger.debug(f"  walk_subclass(self, {cls})")
         self.load_plugin_modules(cls)
@@ -178,17 +183,17 @@ class WalkPlugins:
                 self.walk_subclass(subclass)
 
     def load_plugin_modules(self, cls):
-        """Run self.list_class_plugins and return only the import_module() results."""
-        return list(v for k,v in [x for x in self.list_class_plugins(cls) if x is not None])
+        """Run self.load_class_plugins and return only the import_module() results."""
+        return list(v for k,v in [x for x in self.load_class_plugins(cls) if x is not None])
 
-    def list_class_plugins(self, cls):
-        """Generate a list of plugin names and namespaces.
+    def load_class_plugins(self, cls):
+        """
+        Generate a list of plugin names and namespaces.
 
         Accepts a class, which needs an attribute 'plugin_namespace', whose value is a string
         which is the name of a module to load. Loads that module and iterates over the namespace,
         yielding the name of modules in said namespace.
         """
-        #self._logger.debug(f"      list_class_plugins({cls})")
         if not hasattr(cls, 'plugin_namespace') or cls.plugin_namespace == None:
             self._logger.debug(f"        No 'plugin_namespace' found in class {cls}")
             yield
@@ -198,6 +203,5 @@ class WalkPlugins:
             else:
                 module = importlib.import_module(cls.plugin_namespace)
                 for _finder, name, _ispkg in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
-                    #self._logger.debug(f"        Class {cls}: Found plugin '{name}'")
                     yield name, importlib.import_module(name)
                 self.searched_module_ns.append(cls.plugin_namespace)

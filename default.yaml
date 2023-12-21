@@ -1,5 +1,5 @@
 
-trigger:
+triggers:
   github_webhook:
     - name: "GitHub webhook"
       mq: "default-trigger-push"
@@ -30,15 +30,15 @@ actions:
     - name: "run"
 
 jobs:
-  default:
+  basic:
     - name: "Terraform plan-approve-apply pipeline"
 
       engine: "local"
 
-      trigger:
+      triggers:
         github_webhook:
-          - name: "github_webhook"
-            repo:
+          - repository:
+              url: "https://github.com/octokitty/testing"
               name: "testing"
               owner:
                 name: "octokitty"
