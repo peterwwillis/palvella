@@ -2,7 +2,7 @@
 """The library for triggers. Defines plugin class and some base functions."""
 
 from palvella.lib.instance import Component
-from palvella.lib.instance.mq import MessageQueue
+from palvella.lib.instance.mq import MessageQueue, MQMessage
 
 
 class Trigger(Component, class_type="plugin_base"):
@@ -21,8 +21,18 @@ class Trigger(Component, class_type="plugin_base"):
 
     async def publish(self, *args):
         """Publish a trigger event to any Message Queues attached to 'self'."""
-        return await MessageQueue.run_func(self, *args, func="publish")
+        ret = await MessageQueue.publish(self, *args)
+        return ret
 
-    async def consume(self, *args):
+    async def consume(self):
         """Consume a trigger from the Message Queue."""
-        return await MessageQueue.run_func(self, *args, func="consume")
+        ret = await MessageQueue.consume(self)
+        return ret
+
+    async def trigger(self, *args):
+        """Trigger hooks based on a Message Queue message."""
+        for arg in args:
+            assert ( isinstance(arg, MQMessage) ), f"Error: msg {arg} must be MQMessage"
+            for hook in self.parent.hooks.match_hook(arg):
+                self._logger.debug(f"matching hook {hook}")
+

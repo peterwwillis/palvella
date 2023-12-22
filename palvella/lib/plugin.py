@@ -78,7 +78,6 @@ def match_class_dependencies(self, objects, deps):
 
        Returns the matching classes/instances.
     """
-    _logger.debug(f"objects {objects}")
     # Wrap the list arguments with tuples so that it's hashable for @lru_cache
     return match_class_dependencies_wrapper(self, tuple(objects), tuple(deps))
 @lru_cache

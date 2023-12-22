@@ -42,14 +42,38 @@ class ComponentHooks:
     def __init__(self, parent):
         self.parent = parent
 
+    def list(self):
+        return self._hooks
+
     def register_hook(self, component_ns, plugin_type, hook_type, hook, match_data):
         """Run from a component, adds a hook for a particular function based on specific event type and data."""
+        _logger.debug(f"register_hook({self}, {component_ns}, {plugin_type}, {hook_type}, {hook}, {match_data})")
+
         dep = PluginDependency(component_namespace=component_ns, plugin_type=plugin_type)
         _logger.debug(f"self {self} plugins {self.parent.plugins} dep {dep}")
+
         components = match_class_dependencies(self, self.parent.plugins.classes, [dep])
         for component in components:
             self._hooks.append(ComponentHook(component=component, hook_type=hook_type, hook=hook, match_data=match_data))
 
+    def match_hook(self, msg):
+        for hook in self.parent.hooks.list():
+            for instance in self.parent.components.instances:
+                if hook.component.plugin_namespace != instance.plugin_namespace \
+                   or hook.component.plugin_type != instance.plugin_type:
+                    continue
+                _logger.debug(f"Found instance {instance} matches component {hook.component}")
+                if not self.match_hook_data(hook=hook, component_instance=instance, msg=msg):
+                    continue
+                _logger.debug(f"Hook matched, triggering")
+                # TODO: once the above works, implement 'trigger_hook' below
+                yield hook
+
+    def match_hook_data(self, hook, component_instance, msg):
+        # TODO: implement some logic that looks at the message received,
+        #       matches it up against the hook's expected data, and returns
+        #       true if the hook matches, false if it doesn't
+        _logger.debug(f"msg {msg}")
 
 @dataclass(unsafe_hash=True)
 class ComponentObject:
@@ -77,9 +101,10 @@ class ComponentObjects:
         config:     A Config() object.
     """
 
+    instances = []  # The list of instantiated objects
+
     _config_objects = []  # The list of ComponentObject()s
     _all_objects = []  # The list of ComponentObject()s
-    _instances = []  # The list of instantiated objects
     _logger = makeLogger(__module__ + "/ComponentObjects")
 
     def __repr__(self):
@@ -90,8 +115,15 @@ class ComponentObjects:
         self.config = config
         self._config_objects = self.load_config_objects()
         self._all_objects = self.load_topo_objects(self._config_objects)
-        for x in self.create_instances(self._all_objects):
-            self._instances.append(x)
+
+    async def initialize(self):
+        async for x in self.create_instances(self._all_objects):
+            self.instances.append(x)
+
+    async def create_instances(self, objects):
+        for x in objects:
+            instance = x.instance()
+            yield instance
 
     def get_by_class(self, classref):
         for x in self._objects:
@@ -124,14 +156,6 @@ class ComponentObjects:
                 )
         return objects
 
-    def create_instances(self, objects):
-        for x in objects:
-            yield x.instance()
-
-    @property
-    def instances(self):
-        return self._instances
-
     def load_config_objects(self):
         """
         Parse configuration data and set an internal list of ComponentObject()s.
@@ -148,7 +172,6 @@ class ComponentObjects:
         subclasses = self.parent.subclasses
 
         for component_namespace, datarootval in self.config.data.items():
-            self._logger.debug(f"component_namespace {component_namespace}")
 
             plugin_base = [x for x in subclasses if x.class_type == "plugin_base" \
                            and x.component_namespace == component_namespace]
@@ -159,14 +182,11 @@ class ComponentObjects:
                 self._logger.debug(f"too many plugin bases for '{component_namespace}'")
                 continue
 
-            self._logger.debug(f"plugin_base {plugin_base[0]}")
-
             # Validate schema
             plugin_base[0].validate_config_schema(datarootval)
 
             # Allow the base plugin component to override this method
             for newobj in plugin_base[0].plugin_base_config_objects(plugin_base[0], datarootval):
-                self._logger.debug(f"newobj {newobj}")
                 objects.append(newobj)
 
         return objects
@@ -239,6 +259,7 @@ class Instance(Plugin, class_type="base"):
     hooks = None
     plugins = None
     components = None
+    config = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -253,18 +274,11 @@ class Instance(Plugin, class_type="base"):
 
         self.initialize()
 
-    def initialize(self):
+    async def initialize(self):
         """Initialize the new instance."""
         if self.config:
             self.components = ComponentObjects(parent=self, config=self.config)
-
-    @property
-    def config(self):
-        return self._config
-
-    @config.setter
-    def config(self, arg):
-        self._config = arg
+            await self.components.initialize()
 
 
 class Component(Plugin, class_type="base"):
@@ -334,16 +348,6 @@ class Component(Plugin, class_type="base"):
         """
         jsonschema_validate(data, cls.schema)
 
-    async def send_alert(self, *args, **kwargs):
-        mykwargs = {"hook_type": "event", "trigger_alert": True}
-        await self.send_event(args, {**kwargs, **mykwargs})
-
-    async def send_event(self, *args, **kwargs):
-        for hook in self.parent.hooks:
-            if hook.plugin_namespace == self.plugin_namespace \
-               and hook.plugin_type == self.plugin_type:
-                self.event_hook(hook)
-
     def plugin_base_config_objects(self, data):
         return ComponentObjects.plugin_base_config_objects(self, data)
 
@@ -355,7 +359,5 @@ class Component(Plugin, class_type="base"):
         This is used by plugins to find an instance of another plugin that they
         may need to interact with, attach a hook to, etc.
         """
-        import time; time.sleep(3)
-        self._logger.debug(f"components: {self.parent.components}")
         results = match_class_dependencies(self, self.parent.components.instances, [dep])
         return results

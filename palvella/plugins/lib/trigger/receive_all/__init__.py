@@ -22,15 +22,10 @@ class ReceiveAllTriggers(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         while True:
             await asyncio.sleep(0.2)
             self._logger.debug(f"receive_events({self}): About to consume")
-            #consume_res = await self.consume()
-            #gathered = asyncio.gather(consume_res)
             gathered = await asyncio.gather( self.consume() )
-            frames = gathered[0][0]
-            if len(frames) == 0:
-                return
-            if len(frames) == 2:
-                self._logger.debug(f"receive_events({self}): only identity frame found ({frames[0]})")
-                return
-            identity, event, data = frames[0], frames[1], frames[2:]
-            await self.send_alert(identity, event, data)
+
+            self._logger.debug(f"gathered {gathered}")
+            msg_obj = gathered[0]
+            #if msg_obj # TODO: FINISH ME
+            await self.trigger(*msg_obj)
 

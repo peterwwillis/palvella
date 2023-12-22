@@ -79,8 +79,12 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         # MessageQueue: Publish this message to the message queue as specified in
         #               the configuration for this webhook.
         jsondata = await data.json
-        await self.publish(
-            {"event_type": event_type, "hook_id": hook_id, "delivery": delivery},
+        foo = await self.publish(
+            { "mq":      { "event_type": "trigger" },
+              "webhook": { "event_type": event_type,
+                           "hook_id": hook_id,
+                           "delivery": delivery }
+            },
             jsondata
         )
 
