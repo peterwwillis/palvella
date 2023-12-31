@@ -24,8 +24,9 @@ class ReceiveAllTriggers(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
             self._logger.debug(f"receive_events({self}): About to consume")
             gathered = await asyncio.gather( self.consume() )
 
-            self._logger.debug(f"gathered {gathered}")
-            msg_obj = gathered[0]
+            msg_objs = gathered[0]
+            for arg in msg_objs:
+                self._logger.debug(f"got msg_objs {arg}")
             #if msg_obj # TODO: FINISH ME
-            await self.trigger(*msg_obj)
+            await self.trigger(*msg_objs)
 

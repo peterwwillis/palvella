@@ -80,6 +80,7 @@ def match_class_dependencies(self, objects, deps):
     """
     # Wrap the list arguments with tuples so that it's hashable for @lru_cache
     return match_class_dependencies_wrapper(self, tuple(objects), tuple(deps))
+
 @lru_cache
 def match_class_dependencies_wrapper(self, objects, deps):
     """Implementation of match_class_dependencies()"""
@@ -110,6 +111,7 @@ def match_class_dependencies_wrapper(self, objects, deps):
             matches = matchComponentNs(self, matches, dep)
         results += matches
     return results
+
 
 @dataclass(unsafe_hash=True)
 class WalkPlugins:

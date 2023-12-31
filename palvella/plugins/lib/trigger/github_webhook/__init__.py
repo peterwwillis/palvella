@@ -76,16 +76,15 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
                 self._logger.debug("github_webhook: invalid signature")
                 return JSONResponse({"error": "Invalid signature"}, status_code=400)
 
-        # MessageQueue: Publish this message to the message queue as specified in
-        #               the configuration for this webhook.
         jsondata = await data.json
-        foo = await self.publish(
-            { "mq":      { "event_type": "trigger" },
+        await self.trigger(
+            meta = {
+              "mq":      { "event_type": "trigger" },
               "webhook": { "event_type": event_type,
                            "hook_id": hook_id,
                            "delivery": delivery }
             },
-            jsondata
+            data = [jsondata]
         )
 
         # For 204 status code, you *MUST NOT* use a JSONResponse or HTTPResponse,

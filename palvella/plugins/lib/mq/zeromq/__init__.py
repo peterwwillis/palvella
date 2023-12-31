@@ -6,7 +6,8 @@ import zmq
 import zmq.asyncio
 import asyncio
 
-from palvella.lib.instance.mq import MessageQueue, MQMessage
+from palvella.lib.instance.mq import MessageQueue, OperationError
+from palvella.lib.instance.message import Message
 
 PLUGIN_TYPE = "zeromq"
 
@@ -36,21 +37,24 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
     queue = False
     identity = None
 
-    _sock_type_mapping = { "push": zmq.PUSH, "pull": zmq.PULL,
-                           "sub": zmq.SUB, "pub": zmq.PUB,
-                           "xsub": zmq.XSUB, "xpub": zmq.XPUB
-                         }
-        
+    _socket_type_map = { "push": zmq.PUSH,
+                         "pull": zmq.PULL,
+                         "sub": zmq.SUB,
+                         "pub": zmq.PUB,
+                         "xsub": zmq.XSUB,
+                         "xpub": zmq.XPUB
+                       }
 
     def __repr__(self):
-        return f"ZeroMQ(name={self.name},socket_type={self.socket_type},sock={self.sock},url={self.url})"
+        return "%s(%r)" % (self.__class__, self.__dict__)
 
     def __pre_plugins__(self):
         self.context = zmq.asyncio.Context()
 
+        assert ('socket_type' in self.config_data), "'socket_type' property required in config_data"
+
         for x in ['name', 'socket_type', 'socket_operation', 'queue', 'identity']:
             if x in self.config_data:
-                #self._logger.debug(f"set zeromq attr {x}")
                 setattr(self, x, self.config_data[x])
 
         assert ('url' in self.config_data), "'url' property required in config_data"
@@ -60,11 +64,11 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         """
         Use self.url and self.socket_type to configure a socket.
 
-        If socket_type == "push", does a connect(url).
-        If socket_type == "pull", does a bind(url).
+        If socket_type == "push", socket_operation is set to "connect".
+        If socket_type == "pull", socket_operation is set to "bind".
         """
 
-        self.sock = self.context.socket( self._sock_type_mapping[self.socket_type] )
+        self.sock = self.context.socket( self._socket_type_map[self.socket_type] )
 
         if self.socket_operation == None:
             if self.socket_type == "push":
@@ -86,32 +90,37 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
             self._logger.debug(f"setting sockopt(zmq.SUBSCRIBE, {self.name})")
             self.sock.setsockopt_string(zmq.SUBSCRIBE, self.name)
 
-    async def publish(self, *args):
-        """
-        Publish a series of objects (*args) to the message queue.
+    async def publish(self, message):
 
-        Since ZeroMQ supports multipart messages, each of *args is sent as
-        a unique message frame.
-        
-        If an entry is of type 'dict', it is sent as a JSON blob.
+        def encode_part(arg):
+            if isinstance(arg, dict):
+                return json.dumps(arg).encode()
+            return arg.encode()
+
+        """
+        Publish a Message *message* to the message queue.
+
+        If an entry from *message* is of type 'dict', it is sent as a JSON blob.
         Otherwise it is sent as a binary string.
 
         The result of zeromq's sock.end_multipart() is returned, which
         should be an object which can be checked to determine if the message
         was received.
         """
-        if not self.socket_type:    self.socket_type = "push"
         if not self.sock:           self._setup_socket()
 
         msg_parts = []
-        for arg in args:
-            if type(arg) == type({}):
-                msg_parts.append( json.dumps(arg).encode() )
-            else:
-                msg_parts.append( arg.encode() )
+        for arg in [message.identity, message.meta]:
+            msg_parts.append( encode_part(arg) )
+        # message.data is an array of data payloads
+        for arg in message.data:
+            msg_parts.append( encode_part(arg) )
 
         self._logger.debug(f"zmq: sending messages: {msg_parts}")
-        res = await self.sock.send_multipart(msg_parts=msg_parts, copy=False)
+        try:
+            res = await self.sock.send_multipart(msg_parts=msg_parts, copy=False)
+        except zmq.error.ZMQError as e:
+            raise OperationError(e)
         self._logger.debug(f"zmq: sent message, got {res}")
         return res
 
@@ -119,11 +128,10 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         """
         Consume a message from a queue.
 
-        Returns a MQMessage() object with the *identity*, *event*, and *data* arguments passed as
+        Returns a Message() object with the *identity*, *event*, and *data* arguments passed as
         the first, second, and any further frames in the ZeroMQ message.
         (*identity*, *event*, and *data* are decoded as JSON blobs)
         """
-        if not self.socket_type:    self.socket_type = "pull"
         if not self.sock:           self._setup_socket()
 
         # NOTE: 'copy=False' makes this a non-copying usage, which returns
@@ -134,9 +142,7 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         if len(res) < 2:
             raise Exception("message consumed had less than 2 frames")
         identity, event = res[0], res[1]
-        data=[]
-        if len(res) > 2:
-            data = [json.loads(str(x)) for x in res[2:]]
+        data = [json.loads(str(x)) for x in res[2:]] if len(res) > 2 else []
 
-        mqmsg = MQMessage(identity=json.loads(str(identity)), event=json.loads(str(event)), data=data)
+        mqmsg = Message(identity=json.loads(str(identity)), meta=json.loads(str(event)), data=data)
         return mqmsg

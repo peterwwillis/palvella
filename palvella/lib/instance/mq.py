@@ -4,28 +4,15 @@
 from dataclasses import dataclass
 
 from palvella.lib.instance import Component
+from palvella.lib.instance.message import Message
 from palvella.lib.plugin import PluginDependency
 
-
-@dataclass
-class MQMessage:
-    """
-    A message received from the message queue.
-
-    Arguments:
-        identity:           The sender of the message.
-        event:              A multi-dimensional dict of metadata about the event received.
-          mq:               Message Queue-specific metadata.
-            event_type:     The type of event this is. Options: "trigger"
-        data:               Payload data
-    """
-    identity = None
-    event = None
-    data = None
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-    def __repr__(self):
-        return "%s(%r)" % (self.__class__, self.__dict__)
+class OperationError(Exception):
+    """Raise an error during an operation of a message queue."""
+    def __init__(self, obj):
+        if type(obj) != type(str) and hasattr(obj, '__dict__'):
+            self.__dict__ = {**self.__dict__, **obj.__dict__}
+        super().__init__(obj)
 
 
 class MessageQueue(Component, class_type="plugin_base"):
@@ -35,39 +22,44 @@ class MessageQueue(Component, class_type="plugin_base"):
     component_namespace = "mq"
 
     @staticmethod
-    async def publish(obj, *args):
-        """Publish a message in a message queue."""
+    async def publish(obj, *args, **kwargs):
+        """
+        Publish a message in a message queue.
 
-        # The first frame in the message will have the following structure.
-        # The intent is to identify what sent the message/the message context.
-        my_name = None if not hasattr(obj, 'name') else obj.name
-        obj_args = [
-            {
-                "name": my_name,
-                "plugin_namespace": obj.plugin_namespace,
-                "plugin_type": obj.plugin_type
-            }
-        ]
-        my_args = [*obj_args, *args]
+        Uses the 'run_func' function (of this class) to call the "publish" function of MessageQueue components.
+        """
 
-        return await MessageQueue.run_func(obj, *my_args, func="publish")
+        return await MessageQueue.run_func(obj, *args, func="publish", **kwargs)
 
     @staticmethod
-    async def consume(obj):
-        """Consume a message from a queue."""
-        return await MessageQueue.run_func(obj, func="consume")
+    async def consume(obj, *args, **kwargs):
+        """Consume a message from a queue. Returns MessageQueue.consume()"""
+        return await MessageQueue.run_func(obj, *args, func="consume", **kwargs)
 
     @staticmethod
     async def run_func(obj, *args, func=None, **kwargs):
-        """A wrapper to locate a MessageQueue component instance and run a particular function."""
+        """
+        A wrapper to locate a MessageQueue component instance and run a particular function.
+
+        Arguments:
+            func (required):    A function of the MessageQueue component to call, passing
+                                *args* and *kwargs*.
+            args:               Positional arguments.
+            kwargs:             key=value arguments.
+
+        All loaded components are scanned for a parent class MessageQueue. Of those,
+        if any of them have a *name* attribute, and it matches *obj.config_data['mq']*,
+        assume that component is the MessageQueue the object wants to run *func* on.
+        """
         results = []
+
+        assert (func != None), f"Error: 'func' must not be None."
 
         # Find all instances of components that match MessageQueue
         plugin_dep = PluginDependency(parentclass="MessageQueue")
         plugin_components = obj.get_component(plugin_dep)
-        #obj._logger.debug(f"plugin_components: {plugin_components}")
-        mq_objs = [x for x in plugin_components if x.name == obj.config_data['mq'] ]
 
+        mq_objs = [x for x in plugin_components if x.name == obj.config_data['mq'] ]
         for component in mq_objs:
             if not hasattr(component, func):
                 raise Exception("object {component} does not have function {func}")

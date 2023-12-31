@@ -10,70 +10,13 @@ from ruamel.yaml import YAML
 import importlib_resources
 
 from palvella.lib.plugin import Plugin, PluginDependency, WalkPlugins, match_class_dependencies
+from palvella.lib.instance.hook import Hooks
 
 from ..logging import makeLogger, logging
 
 
 _logger = makeLogger(__name__)
 
-
-@dataclass
-class ComponentHook:
-    component = None
-    hook_type = None
-    hook = None
-    match_data = None
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-    def __repr__(self):
-        return "%s(%r)" % (self.__class__, self.__dict__)
-
-
-class ComponentHooks:
-    """
-    Manages hooks for components.
-
-    Attributes:
-        parent:         A reference to the parent Instance() object.
-    """
-
-    _hooks = []
-
-    def __init__(self, parent):
-        self.parent = parent
-
-    def list(self):
-        return self._hooks
-
-    def register_hook(self, component_ns, plugin_type, hook_type, hook, match_data):
-        """Run from a component, adds a hook for a particular function based on specific event type and data."""
-        _logger.debug(f"register_hook({self}, {component_ns}, {plugin_type}, {hook_type}, {hook}, {match_data})")
-
-        dep = PluginDependency(component_namespace=component_ns, plugin_type=plugin_type)
-        _logger.debug(f"self {self} plugins {self.parent.plugins} dep {dep}")
-
-        components = match_class_dependencies(self, self.parent.plugins.classes, [dep])
-        for component in components:
-            self._hooks.append(ComponentHook(component=component, hook_type=hook_type, hook=hook, match_data=match_data))
-
-    def match_hook(self, msg):
-        for hook in self.parent.hooks.list():
-            for instance in self.parent.components.instances:
-                if hook.component.plugin_namespace != instance.plugin_namespace \
-                   or hook.component.plugin_type != instance.plugin_type:
-                    continue
-                _logger.debug(f"Found instance {instance} matches component {hook.component}")
-                if not self.match_hook_data(hook=hook, component_instance=instance, msg=msg):
-                    continue
-                _logger.debug(f"Hook matched, triggering")
-                # TODO: once the above works, implement 'trigger_hook' below
-                yield hook
-
-    def match_hook_data(self, hook, component_instance, msg):
-        # TODO: implement some logic that looks at the message received,
-        #       matches it up against the hook's expected data, and returns
-        #       true if the hook matches, false if it doesn't
-        _logger.debug(f"msg {msg}")
 
 @dataclass(unsafe_hash=True)
 class ComponentObject:
@@ -264,15 +207,13 @@ class Instance(Plugin, class_type="base"):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.hooks = ComponentHooks(parent=self)
+        self.hooks = Hooks(parent=self)
 
         # Load plugin subclasses from the 'Component' class
         self.plugins = WalkPlugins(Component)
 
         if hasattr(self, 'config_path'):
             self.config = Config(parent=self, config_path=self.config_path)
-
-        self.initialize()
 
     async def initialize(self):
         """Initialize the new instance."""
