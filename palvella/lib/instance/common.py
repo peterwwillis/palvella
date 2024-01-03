@@ -56,8 +56,8 @@ class ComponentObjects:
     def __init__(self, parent, config):
         self.parent = parent
         self.config = config
-        self._config_objects = self.load_config_objects()
-        self._all_objects = self.load_topo_objects(self._config_objects)
+        self._config_objects = self.component_ns_config_objects(self.config.data)
+        self._all_objects = self.all_component_topo_objects(self._config_objects)
 
     async def initialize(self):
         async for x in self.create_instances(self._all_objects):
@@ -68,56 +68,98 @@ class ComponentObjects:
             instance = x.instance()
             yield instance
 
-    def get_by_class(self, classref):
-        for x in self._objects:
-            if x.classref == classref:
-                yield x
+    def all_component_topo_objects(self, objects):
+        """Retrieve a set of ComponentObject()s based on topological sort of plugin graph.
 
-    def load_topo_objects(self, config_objects):
+        The intent is to load plugins that have no configuration, as well as load plugins
+        that do have configuration, but to load them all according to the topological
+        graph of plugin dependencies.
+
+        Gets a topological list of all plugins from `self.parent.plugins.topo_sort()`
+        that have attribute `class_type` value "plugin", and iterate over the list.
+
+        If a component object exists matching a plugin class, creates a new object
+        matching that plugin class.
+
+        Otherwise if a plugin has no matching component object, creates a new instance
+        without any configuration.
+
+        Parameters
+        ---------
+        objects
+            A list of ComponentObject()s. These should be the objects that were created
+            during parsing of configuration.
+
+        Returns
+        -------
+        list
+            A list of ComponentObject()s.
         """
-        Walks the graph of all plugins of class_type 'plugin', sorted topologically 
-        (to handle dependencies first) and creates a list of objects to make instances of.
-        """
-        objects = []
-        # Get all classes
+
+        ret_objects = []
+
+        # Get all plugin classes, sorted topologically
         plugin_class_topo = [x for x in self.parent.plugins.topo_sort() if (x.class_type == "plugin")]
-        for cls in plugin_class_topo:
-            # Get component objects based on class
-            component_objects = [x for x in config_objects if x.classref == cls]
-            # Process the component objects that exist
+
+        for plugin_class in plugin_class_topo:
+
+            # Get any component objects we created for this plugin class, based on config data
+            component_objects = [x for x in objects if x.classref == plugin_class]
+
+            # If any were found, process them
             if len(component_objects) > 0:
                 for obj in component_objects:
                     self._logger.debug(f"Loading new component from object: {obj.classref}")
-                    objects.append(
+                    ret_objects.append(
                         ComponentObject(classref=obj.classref, parent=self.parent, config_data=obj.config_data)
                     )
-            # Otherwise create based on class, not component object
+            # Otherwise create new objects with no configuration
             else:
-                self._logger.debug(f"Loading new component {cls}")
-                objects.append(
-                    ComponentObject(classref=cls, parent=self.parent)
+                self._logger.debug(f"Loading new component {plugin_class}")
+                ret_objects.append(
+                    ComponentObject(classref=plugin_class, parent=self.parent)
                 )
-        return objects
 
-    def load_config_objects(self):
+        return ret_objects
+
+    def component_ns_config_objects(self, data):
         """
-        Parse configuration data and set an internal list of ComponentObject()s.
+        Parse `data` and return a list of ComponentObject()s.
 
-        For each key:value (in the root of 'self.data'),
-            look for a key that matches the 'component_namespace'
-            of a loaded plugin (of subclass_type 'plugin_base').
+        For each key:value (in the root of `data`) look for a key that matches the
+        'component_namespace' of a loaded plugin (of subclass_type 'plugin_base').
 
-        For each of those, have the class of the plugin validate its own configuration
-        and return objects as needed.
-        Set self._objects to the resulting set of objects.
+        For each of those, method `validate_config_schema()` is run against the `misc_data`
+        value, and a new ComponentObject() is created based on `misc_data`.
+
+        Parameters
+        ----------
+        data
+            A dict of the following format:
+            
+                component_namespace:
+                    misc_data
+            
+            The `component_namespace` must be a subclass in `self.parent.subclasses`
+            whose attribute `class_type` is "plugin_base" and attribute
+            `component_namespace` is the same as `component_namespace` above.
+
+            The `misc_data` entry is defined by the function `plugin_base_config_objects()`
+            which may be overloaded by the plugin class.
+
+        Returns
+        -------
+        list
+            A list of ComponentObject()s.
         """
         objects = []
         subclasses = self.parent.subclasses
 
-        for component_namespace, datarootval in self.config.data.items():
+        for component_namespace, datarootval in data.items():
 
-            plugin_base = [x for x in subclasses if x.class_type == "plugin_base" \
-                           and x.component_namespace == component_namespace]
+            plugin_base = [x for x in subclasses
+                             if x.class_type == "plugin_base" \
+                             and x.component_namespace == component_namespace]
             if len(plugin_base) < 1:
                 self._logger.debug(f"could not find plugin base for '{component_namespace}'")
                 continue
@@ -128,42 +170,44 @@ class ComponentObjects:
             # Validate schema
             plugin_base[0].validate_config_schema(datarootval)
 
-            # Allow the base plugin component to override this method
+            # Allow the base plugin component to override the 'plugin_base_config_objects'
+            # method (if for example it wants a different configuration format).
             for newobj in plugin_base[0].plugin_base_config_objects(plugin_base[0], datarootval):
                 objects.append(newobj)
 
         return objects
 
     def plugin_base_config_objects(self, data):
-        """
-        Parse the configuration for a 'plugin_base' and return component objects based on it.
+        """Parse the configuration and return ComponentObject()s.
 
-        This class method is used to parse a chunk of configuration for a given 'plugin_base'
-        and return the ComponentObject()s that will turn into new instances of components.
+        Parses `data` for plugins whose parent class is `self` and plugin type
+        matches `data` dict's `plugin_type` value (see below).
 
-        Most 'plugin_base' data follows this format:
-            plugin_base_name:
-                plugin_type_name:
+        Parameters
+        ---------
+        data
+            A dict of the following format (shown as YAML):
+                plugin_type:
                     - item1
                     - item2
 
-        The intent being to return:
-            ComponentObject(classref=class_of_plugin_type_name, config_data=[item1])
-            ComponentObject(classref=class_of_plugin_type_name, config_data=[item2])
-
-        However, some 'plugin_base' may use a different configuration format. Those
-        'plugin_base' can override this method and return objects however they prefer.
+        Returns
+        -------
+        list
+            A list of ComponentObject()s, with their `classref` and `config_data`
+            attributes set.
         """
+
+        _logger.debug(f"self {self}")
         for plugin_type, config_data in data.items():
             assert (type(config_data) == type([])), f"Configuration entries for '{plugin_type}' must be in list format"
-            dep = PluginDependency(parentclassname=self.__name__, plugin_type=plugin_type)
-            import sys; print(f"self {self}", file=sys.stderr)
             _logger.debug(f"plugin_type {plugin_type} config_data {config_data}")
-            _logger.debug(f"dep {dep}")
-            for x in match_class_dependencies(self, self.__subclasses__(), [dep]):
-                for entry in config_data:
-                    _logger.debug(f"yielding new component object")
-                    yield ComponentObject(classref=x, config_data=entry)
+            dep = PluginDependency(parentclassname=self.__name__, plugin_type=plugin_type)
+            #dep = PluginDependency(parentclassname=self.__class__.__name__, plugin_type=plugin_type)
+            for plugin_class in match_class_dependencies(self, self.__subclasses__(), [dep]):
+                for item in config_data:
+                    _logger.debug(f"yielding new component object ({plugin_class})")
+                    yield ComponentObject(classref=plugin_class, config_data=item)
 
 
 class Config:
@@ -286,10 +330,14 @@ class Component(Plugin, class_type="base"):
         is first loaded, based on the default configuration of the component (if it defines a schema).
         This function exists in the Component class so the component class can override
         this validation if needed.
+
+        TODO: Document where/how to encode the schema.
         """
         jsonschema_validate(data, cls.schema)
 
+    @staticmethod
     def plugin_base_config_objects(self, data):
+        self.__doc__ = ComponentObjects.plugin_base_config_objects.__doc__
         return ComponentObjects.plugin_base_config_objects(self, data)
 
     def get_component(self, dep):

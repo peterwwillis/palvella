@@ -103,9 +103,9 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         If an entry from *message* is of type 'dict', it is sent as a JSON blob.
         Otherwise it is sent as a binary string.
 
-        The result of zeromq's sock.end_multipart() is returned, which
-        should be an object which can be checked to determine if the message
-        was received.
+        The result of zeromq's sock.end_multipart() is returned, which should
+        be an object which can be checked to determine if the message was
+        received.
         """
         if not self.sock:           self._setup_socket()
 
@@ -117,10 +117,12 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
             msg_parts.append( encode_part(arg) )
 
         self._logger.debug(f"zmq: sending messages: {msg_parts}")
+
         try:
             res = await self.sock.send_multipart(msg_parts=msg_parts, copy=False)
         except zmq.error.ZMQError as e:
             raise OperationError(e)
+
         self._logger.debug(f"zmq: sent message, got {res}")
         return res
 

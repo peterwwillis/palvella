@@ -358,6 +358,20 @@ Example methods:
 Actions are the basic unit of logic executed by a Job. They perform computation
 on some data, and return a status, as well as optional output.
 
+Actions are logical constructs. They represent something to be done, which will
+typically be implemented in an Engine.
+
+If an Action says "run `echo hello world`":
+- And the Engine is type "local":
+  - Then Palvella will find an Engine running on a host, and the Engine will
+    execute the 'sh' shell program, pass it the arguments 'echo hello world',
+    collect the standard output and exit status, and return it to the Job.
+- And the Engine is type "k8s":
+  - Then Palvella will find an Engine configured for a Kubernetes cluster,
+    and the Engine will schedule a new Pod with a default container, pass "echo
+    hello world" to the commands to be executed in the container, collect the
+    standard output and exit status, and return it to the Job.
+
 An action can be fully specified in configuration, or it can reference a library
 of actions.
 
@@ -399,18 +413,39 @@ An Action plugin uses a set of methods to perform its function. Example methods:
 ---
 #### Plugins: Category: Engine
 
-Engines are the method by which logic is executed.
-They are used to execute Actions within Jobs.
+Engines are the method by which logic is executed.  They are used to execute
+Actions within Jobs.
 
-While a Job specifies what we should execute, the Engine actually implements
-that execution. This allows us to abstract away the platform that the execution
-is performed on.
+While a Job specifies what combinations of Actions should run, and Actions
+specify what specifically we should run, the Engine specifies where we run it
+and how. This allows us to abstract away the platform that actions are performed
+on.
 
 An instance of an Engine may be a process which is already running within a specific
-computing environment, or it may be created dynamically at run-time as needed by
-an Action or Job. An instance of an Engine when it is executing logic for an
-Action or a Job is called a "Worker" (the same difference between a compiled
-executable file, and a running process).
+computing environment, or it may be created dynamically at run-time as needed
+by an Action or Job.
+
+An instance of an Engine when it is executing logic for an Action or a Job is
+called a "Worker" (the difference between a compiled executable file, and a
+running process).
+
+An Engine can have a Jobs attached to it. The 'setup' Job allows the Engine to
+run Actions that will set up the Engine for its work, and the 'teardown' Job
+allows the Engine to run Actions that will clean up once the Engine is done.
+
+These Engine Jobs afford the ability to do things like:
+ - Create and mount a data volume
+ - Set environment variables
+ - Authenticate with a cloud provider
+ - Create cloud resources before an Action or Job starts running
+ - Destroy cloud resources once an Action or Job is done running
+
+In theory one could simply create a Job, and have the Actions in that job
+perform the steps necessary to set up or tear down the Engine. But by
+moving those steps into a Job attached to the Engine, the Engine becomes
+a more composeable/reusable component. The parent Job can therefore be
+smaller and doesn't require the duplication of including the setup and
+teardown steps within the larger job.
 
 
 ##### Plugins: Category: Engine: Parameters

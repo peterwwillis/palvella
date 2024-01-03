@@ -7,6 +7,7 @@ from palvella.lib.instance import Component
 from palvella.lib.instance.message import Message
 from palvella.lib.plugin import PluginDependency
 
+
 class OperationError(Exception):
     """Raise an error during an operation of a message queue."""
     def __init__(self, obj):

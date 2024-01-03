@@ -12,12 +12,13 @@ class Message:
     A message to pass between IPC components.
 
     Arguments:
-        identity:               The sender of the message.
+        identity:               The sender of the message. This is detected automatically from
+                                the object passed as the constructor's first argument.
           name:                 Name of the sender of the message.
           plugin_namespace:     The plugin namespace of the sender.
           plugin_type:          The plugin type of the sender.
-        meta:                   A multi-dimensional dict of metadata about the event received.
-                                Each key's value should be a dict.
+        meta:                   A multi-dimensional dict of metadata about the
+                                event received.  Each key's value should be a dict.
         data:                   Payload data.
     """
 
@@ -25,6 +26,15 @@ class Message:
 
     @dataclass
     class Identity:
+        """Keep the identity of the message.
+
+        Pass either a dict, or a set of key=value arguments, to set the identity data.
+
+        Arguments:
+            name:                   Name of the object that created the message.
+            plugin_namespace:       Plugin namespace of the object that created the message.
+            plugin_type:            Plugin type of the object that created the message.
+        """
 
         def __repr__(self):
             return "%s(%r)" % (self.__class__, self.__dict__)
@@ -46,10 +56,12 @@ class Message:
             self.__dict__.update(kv)
 
         def encode(self):
+            """Return a binary encoding of the Identity data as a JSON blob."""
             return json.dumps(self.__dict__).encode()
 
     @dataclass
     class Meta:
+        """Keeps a multi-dimensional dict of metadata."""
 
         def __repr__(self):
             return "%s(%r)" % (self.__class__, self.__dict__)
@@ -60,20 +72,21 @@ class Message:
             self.__dict__.update(kv)
 
         def encode(self):
+            """Return a binary encoding of the metadata as a JSON blob."""
             return json.dumps(self.__dict__).encode()
 
     @dataclass
     class Data:
+        """Keeps a list of data. Iterable."""
 
         _ctr = 0
-        _data = []
 
         def __repr__(self):
             return "%s(%r)" % (self.__class__, self.__dict__)
 
-        def __init__(self, args):
+        def __init__(self, args=[]):
             assert ( isinstance(args, list) ), "Error: Data class argument must be a list"
-            self._data = args
+            self.data = args
 
         def __iter__(self):
             return self
@@ -81,13 +94,20 @@ class Message:
         def __next__(self):
             self._ctr += 1
             try:
-                return self._data[self._ctr-1]
+                return self.data[self._ctr-1]
             except IndexError:
                 self._ctr = 0
                 raise StopIteration
 
         def encode(self):
-            return json.dumps(self._data).encode()
+            """Return a binary encoding of the data array as a JSON blob.
+
+            NOTE: Once encoded this way, it may appear that the data originally
+            included an array as the first element, when in fact the outer
+            array in the encoded JSON is the array this class uses to keep all
+            the data items. The outer array must later be unpacked and
+            considered separate from the data itself."""
+            return json.dumps(self.data).encode()
 
 
     def __init__(self, parentobj=None, **kwargs):
@@ -104,17 +124,10 @@ class Message:
             raise Exception("Missing argument to Message(): 'meta'")
         self.meta = self.Meta(kwargs['meta'])
 
-        self._data = self.Data([])
+        self.data = self.Data()
         if 'data' in kwargs.keys():
             self._logger.debug(f"setting data as {kwargs['data']}")
-            self._data = self.Data(kwargs['data'])
+            self.data = self.Data(kwargs['data'])
 
     def __repr__(self):
         return "%s(%r)" % (self.__class__, self.__dict__)
-
-    @property
-    def data(self):
-        return self._data
-    @data.setter
-    def data(self, val):
-        self._data = val

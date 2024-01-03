@@ -18,18 +18,24 @@ class Job(Component, class_type="plugin_base"):
     component_namespace = "jobs"
     actions = []
 
-    def run(self, **kwargs):
-        """Run a Job."""
-        self._logger.debug(f"Job.run({kwargs})")
-        for action in self.actions:
-            self._logger.debug(f"  action '{action}'")
+    #def run(self, **kwargs):
+    #    """Run a Job."""
+    #    self._logger.debug(f"Job.run({kwargs})")
+    #    for action in self.actions:
+    #        self._logger.debug(f"  action '{action}'")
 
     def register_hook(self, component_namespace, callback, hook_type=None):
         """
-        Register a hook for a given callback function.
+        Register a callback function for each plugin section configured in self.config_data.
+
+        For every 'plugin_type', 'data' section in self.config_data[component_namespace],
+        registers a 'callback' function, optionally passing 'hook_type'.
+
+        The end result is that the function will be called if any of the configured plugins
+        run a trigger() function.
 
         Arguments:
-            component_namespaces:           A list of names of component namespaces.
+            component_namespace:            The name of a component namespace.
             callback:                       A function to call.
             hook_type:                      (Optional) The name of the type of hook
                                             being registered.

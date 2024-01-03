@@ -25,9 +25,13 @@ engine:
   local:
     - name: "local"
 
-actions:
-  run:
-    - name: "run"
+# TODO: We may not need this at all, as actions are typically
+#       defined in a Job, not on their own.
+#       Maybe we bring this back if we want to define reusable/complex actions
+#       and refer back to them by name?
+#actions:
+#  run:
+#    - name: "run"
 
 jobs:
   basic:
@@ -56,4 +60,6 @@ jobs:
       actions:
         run:
           - name: "Terraform plan"
+            command: |
+                terraform plan --help
 
