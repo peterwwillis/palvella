@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import dataclass
+from collections import UserList
 
 from ..logging import makeLogger
 
@@ -76,17 +77,17 @@ class Message:
             return json.dumps(self.__dict__).encode()
 
     @dataclass
-    class Data:
+    class Data(UserList):
         """Keeps a list of data. Iterable."""
 
         _ctr = 0
 
-        def __repr__(self):
-            return "%s(%r)" % (self.__class__, self.__dict__)
-
         def __init__(self, args=[]):
             assert ( isinstance(args, list) ), "Error: Data class argument must be a list"
-            self.data = args
+            return super().__init__(args)
+
+        def __repr__(self):
+            return f"{self.__class__}(CONCEALED)"
 
         def __iter__(self):
             return self
@@ -126,7 +127,7 @@ class Message:
 
         self.data = self.Data()
         if 'data' in kwargs.keys():
-            self._logger.debug(f"setting data as {kwargs['data']}")
+            #self._logger.debug(f"setting data as {kwargs['data']}")
             self.data = self.Data(kwargs['data'])
 
     def __repr__(self):

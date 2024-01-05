@@ -116,7 +116,7 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         for arg in message.data:
             msg_parts.append( encode_part(arg) )
 
-        self._logger.debug(f"zmq: sending messages: {msg_parts}")
+        self._logger.debug(f"zmq: sending messages ({len(msg_parts)})")
 
         try:
             res = await self.sock.send_multipart(msg_parts=msg_parts, copy=False)

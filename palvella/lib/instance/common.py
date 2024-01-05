@@ -4,6 +4,9 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from collections import UserDict
+import copy
+
 
 from jsonschema import validate as jsonschema_validate
 from ruamel.yaml import YAML
@@ -16,7 +19,6 @@ from ..logging import makeLogger, logging
 
 
 _logger = makeLogger(__name__)
-
 
 @dataclass(unsafe_hash=True)
 class ComponentObject:
@@ -56,7 +58,12 @@ class ComponentObjects:
     def __init__(self, parent, config):
         self.parent = parent
         self.config = config
-        self._config_objects = self.component_ns_config_objects(self.config.data)
+
+        for plugin_class, config_data in self.parent.config.component_ns_config_objects(self.config.data):
+            self._config_objects.append(
+                ComponentObject(classref=plugin_class, config_data=config_data)
+            )
+
         self._all_objects = self.all_component_topo_objects(self._config_objects)
 
     async def initialize(self):
@@ -111,7 +118,10 @@ class ComponentObjects:
                 for obj in component_objects:
                     self._logger.debug(f"Loading new component from object: {obj.classref}")
                     ret_objects.append(
-                        ComponentObject(classref=obj.classref, parent=self.parent, config_data=obj.config_data)
+                        ComponentObject(
+                            classref=obj.classref, parent=self.parent,
+                            config_data=obj.config_data
+                        )
                     )
             # Otherwise create new objects with no configuration
             else:
@@ -122,92 +132,20 @@ class ComponentObjects:
 
         return ret_objects
 
-    def component_ns_config_objects(self, data):
-        """
-        Parse `data` and return a list of ComponentObject()s.
 
-        For each key:value (in the root of `data`) look for a key that matches the
-        'component_namespace' of a loaded plugin (of subclass_type 'plugin_base').
+@dataclass
+class ConfigData(UserDict):
+    def __init__(self, data=None):
+        return super().__init__(data)
 
-        For each of those, method `validate_config_schema()` is run against the `misc_data`
-        value, and a new ComponentObject() is created based on `misc_data`.
+    def __getitem__(self, key):
+        return super().__getitem__(key)
 
-        Parameters
-        ----------
-        data
-            A dict of the following format:
-            
-                component_namespace:
-                    misc_data
-            
-            The `component_namespace` must be a subclass in `self.parent.subclasses`
-            whose attribute `class_type` is "plugin_base" and attribute
-            `component_namespace` is the same as `component_namespace` above.
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
 
-            The `misc_data` entry is defined by the function `plugin_base_config_objects()`
-            which may be overloaded by the plugin class.
-
-        Returns
-        -------
-        list
-            A list of ComponentObject()s.
-        """
-        objects = []
-        subclasses = self.parent.subclasses
-
-        for component_namespace, datarootval in data.items():
-
-            plugin_base = [x for x in subclasses
-                             if x.class_type == "plugin_base" \
-                             and x.component_namespace == component_namespace]
-            if len(plugin_base) < 1:
-                self._logger.debug(f"could not find plugin base for '{component_namespace}'")
-                continue
-            elif len(plugin_base) > 1:
-                self._logger.debug(f"too many plugin bases for '{component_namespace}'")
-                continue
-
-            # Validate schema
-            plugin_base[0].validate_config_schema(datarootval)
-
-            # Allow the base plugin component to override the 'plugin_base_config_objects'
-            # method (if for example it wants a different configuration format).
-            for newobj in plugin_base[0].plugin_base_config_objects(plugin_base[0], datarootval):
-                objects.append(newobj)
-
-        return objects
-
-    def plugin_base_config_objects(self, data):
-        """Parse the configuration and return ComponentObject()s.
-
-        Parses `data` for plugins whose parent class is `self` and plugin type
-        matches `data` dict's `plugin_type` value (see below).
-
-        Parameters
-        ---------
-        data
-            A dict of the following format (shown as YAML):
-                plugin_type:
-                    - item1
-                    - item2
-
-        Returns
-        -------
-        list
-            A list of ComponentObject()s, with their `classref` and `config_data`
-            attributes set.
-        """
-
-        _logger.debug(f"self {self}")
-        for plugin_type, config_data in data.items():
-            assert (type(config_data) == type([])), f"Configuration entries for '{plugin_type}' must be in list format"
-            _logger.debug(f"plugin_type {plugin_type} config_data {config_data}")
-            dep = PluginDependency(parentclassname=self.__name__, plugin_type=plugin_type)
-            #dep = PluginDependency(parentclassname=self.__class__.__name__, plugin_type=plugin_type)
-            for plugin_class in match_class_dependencies(self, self.__subclasses__(), [dep]):
-                for item in config_data:
-                    _logger.debug(f"yielding new component object ({plugin_class})")
-                    yield ComponentObject(classref=plugin_class, config_data=item)
+    def __repr__(self):
+        return f"{self.__class__}(CONCEALED)"
 
 
 class Config:
@@ -236,6 +174,62 @@ class Config:
             yaml = YAML(typ='safe')
             return yaml.load(f)
         raise ValueError("No configuration provided")
+
+    def component_ns_config_objects(self, data):
+        """
+        Parse configuration `data` and return plugin class and data assignment.
+
+        For each key:value (in the root of `data`) look for a key that matches the
+        'component_namespace' of a loaded plugin (of subclass_type 'plugin_base').
+
+        For each of those, method `validate_config_schema()` is run against the `misc_data`
+        value, and a plugin class and `config_data` item is returned.
+
+        Parameters
+        ----------
+        data
+            A dict of the following format:
+            
+                component_namespace:
+                  plugin_type:
+                    - item1
+                    - item2
+            
+            The `component_namespace` must be a subclass in `self.parent.subclasses`
+            whose attribute `class_type` is "plugin_base" and attribute
+            `component_namespace` is the same as `component_namespace` above.
+
+            The `plugin_type` must have a parent class `component_namespace`.
+
+        Returns
+        -------
+        list
+            For each `item` (see above), return the plugin class and the item.
+        """
+        subclasses = self.parent.subclasses
+
+        for component_namespace, datarootv in data.items():
+
+            plugin_base = [x for x in subclasses
+                             if x.class_type == "plugin_base" \
+                             and x.component_namespace == component_namespace]
+            if len(plugin_base) < 1:
+                self._logger.debug(f"could not find plugin base for '{component_namespace}'")
+                continue
+            elif len(plugin_base) > 1:
+                self._logger.debug(f"too many plugin bases for '{component_namespace}'")
+                continue
+
+            # Validate schema
+            plugin_base[0].validate_config_schema(datarootv)
+
+            for plugin_type, config_data in datarootv.items():
+                assert (type(config_data) == type([])), f"Configuration entries for '{plugin_type}' must be in list format"
+                dep = PluginDependency(parentclassname=plugin_base[0].__name__, plugin_type=plugin_type)
+                for plugin_class in match_class_dependencies(self, plugin_base[0].__subclasses__(), [dep]):
+                    for item in config_data:
+                        _logger.debug(f"yielding new component object ({plugin_class})")
+                        yield plugin_class, ConfigData(item)
 
 
 class Instance(Plugin, class_type="base"):
@@ -285,7 +279,7 @@ class Component(Plugin, class_type="base"):
     plugin_namespace = "palvella.lib.instance"
 
     #component_namespace = "instance"
-    config_data = {}  # Each component gets an empty config_data by default
+    config_data = ConfigData()  # Each component gets an empty config_data by default
     schema = True
     _pre_plugins_ref_name = "__pre_plugins__"
     name = None
@@ -335,11 +329,6 @@ class Component(Plugin, class_type="base"):
         """
         jsonschema_validate(data, cls.schema)
 
-    @staticmethod
-    def plugin_base_config_objects(self, data):
-        self.__doc__ = ComponentObjects.plugin_base_config_objects.__doc__
-        return ComponentObjects.plugin_base_config_objects(self, data)
-
     def get_component(self, dep):
         """
         Pass a PluginDependency() and this function will return all of the
@@ -350,3 +339,38 @@ class Component(Plugin, class_type="base"):
         """
         results = match_class_dependencies(self, self.parent.components.instances, [dep])
         return results
+
+    def register_hook(self, component_namespace, callback, hook_type=None):
+        """
+        Register a callback function for each plugin section configured in self.config_data.
+
+        For every 'plugin_type', 'data' section in self.config_data[component_namespace],
+        registers a 'callback' function, optionally passing 'hook_type'.
+
+        The end result is that the function will be called if any of the configured plugins
+        run a trigger() function.
+
+        Arguments:
+            component_namespace:            The name of a component namespace.
+            callback:                       A function to call.
+            hook_type:                      (Optional) The name of the type of hook
+                                            being registered.
+        """
+
+        if not component_namespace in self.config_data:
+            self._logger.debug(f"Warning: could not find component namespace '{component_namespace}' in self.config_data")
+            return
+
+        # Register a hook if this component (Job) has been configured
+        # with a component namespace section, and a particular plugin type in each
+        # section. Basically the configuration determines what plugins can trigger
+        # this job.
+        for plugin_type, data in self.config_data[component_namespace].items():
+            for item in data:
+                plugin_dep = PluginDependency(component_namespace=component_namespace, plugin_type=plugin_type)
+                self.parent.hooks.register_hook(
+                    plugin_dep=plugin_dep,
+                    hook_type=hook_type,
+                    callback=self.receive_alert,
+                    data=item
+                )

@@ -31,6 +31,6 @@ class BasicJob(Job, class_type="plugin", plugin_type=PLUGIN_TYPE):
             self._logger.debug(f"Warning: no 'actions' found in self.config_data; returning")
             return
 
-        action_objs = self.plugin_base_config_objects(self, self.config_data['actions'])
+        action_objs = self.parent.config.component_ns_config_objects( {"actions": {**self.config_data['actions']}} )
         for action_obj in action_objs:
             self._logger.debug(f"action_obj {action_obj}")

@@ -24,37 +24,3 @@ class Job(Component, class_type="plugin_base"):
     #    for action in self.actions:
     #        self._logger.debug(f"  action '{action}'")
 
-    def register_hook(self, component_namespace, callback, hook_type=None):
-        """
-        Register a callback function for each plugin section configured in self.config_data.
-
-        For every 'plugin_type', 'data' section in self.config_data[component_namespace],
-        registers a 'callback' function, optionally passing 'hook_type'.
-
-        The end result is that the function will be called if any of the configured plugins
-        run a trigger() function.
-
-        Arguments:
-            component_namespace:            The name of a component namespace.
-            callback:                       A function to call.
-            hook_type:                      (Optional) The name of the type of hook
-                                            being registered.
-        """
-
-        if not component_namespace in self.config_data:
-            self._logger.debug(f"Warning: could not find component namespace '{component_namespace}' in self.config_data")
-            return
-
-        # Register a hook if this component (Job) has been configured
-        # with a component namespace section, and a particular plugin type in each
-        # section. Basically the configuration determines what plugins can trigger
-        # this job.
-        for plugin_type, data in self.config_data[component_namespace].items():
-            for item in data:
-                plugin_dep = PluginDependency(component_namespace=component_namespace, plugin_type=plugin_type)
-                self.parent.hooks.register_hook(
-                    plugin_dep=plugin_dep,
-                    hook_type=hook_type,
-                    callback=self.receive_alert,
-                    data=item
-                )
