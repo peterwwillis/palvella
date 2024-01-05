@@ -33,6 +33,7 @@ class ComponentObject:
         return "%s(%r)" % (self.__class__, self.__dict__)
     def instance(self):
         if not self._instance:
+            _logger.debug(f"making {self.classref}(parent={self.parent}, config_data={self.config_data})")
             self._instance = self.classref(parent=self.parent, config_data=self.config_data)
         return self._instance
 
@@ -47,9 +48,8 @@ class ComponentObjects:
     """
 
     instances = []  # The list of instantiated objects
+    objects = []  # The list of ComponentObject()s
 
-    _config_objects = []  # The list of ComponentObject()s
-    _all_objects = []  # The list of ComponentObject()s
     _logger = makeLogger(__module__ + "/ComponentObjects")
 
     def __repr__(self):
@@ -59,23 +59,18 @@ class ComponentObjects:
         self.parent = parent
         self.config = config
 
-        for plugin_class, config_data in self.parent.config.component_ns_config_objects(self.config.data):
-            self._config_objects.append(
-                ComponentObject(classref=plugin_class, config_data=config_data)
-            )
-
-        self._all_objects = self.all_component_topo_objects(self._config_objects)
+        self.add_config_components(self.config.data, self.config.objects)
+        self.add_all_component_topo_objects(self.config.objects, self.objects)
 
     async def initialize(self):
-        async for x in self.create_instances(self._all_objects):
-            self.instances.append(x)
+        for x in self.objects:
+            self.instances.append(x.instance())
 
-    async def create_instances(self, objects):
-        for x in objects:
-            instance = x.instance()
-            yield instance
+    def add_config_components(self, data, array):
+        for plugin_class, config_data in self.parent.config.component_ns_config_objects(data):
+            array.append(ComponentObject(classref=plugin_class, config_data=config_data))
 
-    def all_component_topo_objects(self, objects):
+    def add_all_component_topo_objects(self, objects, array):
         """Retrieve a set of ComponentObject()s based on topological sort of plugin graph.
 
         The intent is to load plugins that have no configuration, as well as load plugins
@@ -103,8 +98,6 @@ class ComponentObjects:
             A list of ComponentObject()s.
         """
 
-        ret_objects = []
-
         # Get all plugin classes, sorted topologically
         plugin_class_topo = [x for x in self.parent.plugins.topo_sort() if (x.class_type == "plugin")]
 
@@ -117,7 +110,7 @@ class ComponentObjects:
             if len(component_objects) > 0:
                 for obj in component_objects:
                     self._logger.debug(f"Loading new component from object: {obj.classref}")
-                    ret_objects.append(
+                    array.append(
                         ComponentObject(
                             classref=obj.classref, parent=self.parent,
                             config_data=obj.config_data
@@ -126,15 +119,18 @@ class ComponentObjects:
             # Otherwise create new objects with no configuration
             else:
                 self._logger.debug(f"Loading new component {plugin_class}")
-                ret_objects.append(
+                array.append(
                     ComponentObject(classref=plugin_class, parent=self.parent)
                 )
-
-        return ret_objects
 
 
 @dataclass
 class ConfigData(UserDict):
+    # subclasses UserDict because dict requires a lot more overloading to avoid bugs
+    """A class (that implements a dict) to store configuration data and manipulate it.
+       Mainly useful to be able to conceal data when printing it.
+    """
+
     def __init__(self, data=None):
         return super().__init__(data)
 
@@ -152,6 +148,8 @@ class Config:
     """A class to parse a configuration file and load it into a data structure."""
 
     _config_path = None
+    objects = []  # ComponentObject()s derived from config files
+    #data = None
 
     def __init__(self, parent, config_path):
         """Initialize new configuration.
@@ -177,7 +175,7 @@ class Config:
 
     def component_ns_config_objects(self, data):
         """
-        Parse configuration `data` and return plugin class and data assignment.
+        Parse dict `data` and return plugin class and data assignment.
 
         For each key:value (in the root of `data`) look for a key that matches the
         'component_namespace' of a loaded plugin (of subclass_type 'plugin_base').
@@ -188,7 +186,7 @@ class Config:
         Parameters
         ----------
         data
-            A dict of the following format:
+            A dict of the following format (shown as YAML):
             
                 component_namespace:
                   plugin_type:
@@ -196,10 +194,8 @@ class Config:
                     - item2
             
             The `component_namespace` must be a subclass in `self.parent.subclasses`
-            whose attribute `class_type` is "plugin_base" and attribute
-            `component_namespace` is the same as `component_namespace` above.
-
-            The `plugin_type` must have a parent class `component_namespace`.
+            whose attribute `class_type` is "plugin_base".
+            `plugin_type` must have a parent class `component_namespace`.
 
         Returns
         -------
@@ -286,11 +282,14 @@ class Component(Plugin, class_type="base"):
 
     def __init__(self, **kwargs):
         """
-        Initialize the new object.
+        Initialize the new Component object.
 
-        Arguments:
-            parent: A reference to the parent Instance() object
-            config_data: A dict of key=value pairs loaded from Config.parse().
+        Parameters
+        ----------
+        parent
+            A reference to the parent Instance() object
+        config_data
+            A dict of key=value pairs loaded from Config.parse().
         """
         super().__init__(**kwargs)
 
@@ -336,6 +335,16 @@ class Component(Plugin, class_type="base"):
 
         This is used by plugins to find an instance of another plugin that they
         may need to interact with, attach a hook to, etc.
+
+        Parameters
+        ----------
+        dep
+            A PluginDependency()
+
+        Returns
+        -------
+        list
+            A list of matching instances of components
         """
         results = match_class_dependencies(self, self.parent.components.instances, [dep])
         return results
@@ -350,11 +359,14 @@ class Component(Plugin, class_type="base"):
         The end result is that the function will be called if any of the configured plugins
         run a trigger() function.
 
-        Arguments:
-            component_namespace:            The name of a component namespace.
-            callback:                       A function to call.
-            hook_type:                      (Optional) The name of the type of hook
-                                            being registered.
+        Parameters
+        ----------
+        component_namespace
+            The name of a component namespace.
+        callback
+            A function to call.
+        hook_type
+            (Optional) The name of the type of hook being registered.
         """
 
         if not component_namespace in self.config_data:

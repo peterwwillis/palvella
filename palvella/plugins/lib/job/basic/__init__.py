@@ -31,6 +31,10 @@ class BasicJob(Job, class_type="plugin", plugin_type=PLUGIN_TYPE):
             self._logger.debug(f"Warning: no 'actions' found in self.config_data; returning")
             return
 
-        action_objs = self.parent.config.component_ns_config_objects( {"actions": {**self.config_data['actions']}} )
-        for action_obj in action_objs:
-            self._logger.debug(f"action_obj {action_obj}")
+        self.parent.components.add_config_components(
+            {"actions": {**self.config_data['actions']}},
+            self.parent.config.objects
+        )
+        # TODO: Finish this section. Currently an object is getting created but never initialized.
+        #       Needs some thinking about what to do.
+        self._logger.debug(f"Done adding actions from job {self}")
