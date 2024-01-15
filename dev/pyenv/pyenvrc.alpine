@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+
+SUDO="$(command -v sudo)"
+
+_download_pyenv_installer () {
+    if [ ! -e "pyenv-installer" ] ; then
+        $SUDO apk add make curl
+        make download-pyenv
+    fi
+}
+
+PYENV_BUILD_DEPENDENCIES="git bash build-base curl libffi-dev openssl-dev bzip2-dev zlib-dev readline-dev sqlite-dev xz-dev tk-dev"
+
+_install_pyenv_build_dependencies () {
+    if [ ! -d "$PYENV_ROOT" ] ; then
+        $SUDO apk add --virtual pyenv-build-deps $PYENV_BUILD_DEPENDENCIES
+    fi
+}
+
+_uninstall_pyenv_build_dependencies () {
+    if [ -e /.dockerenv ] \
+       || [ "$HOSTNAME" = "buildkitsandbox" ] \
+       || grep -q docker /proc/1/cgroup \
+       || rev /proc/1/cgroup | cut -d : -f 1 | rev | grep -q -v '^/$'
+    then
+        $SUDO apk del pyenv-build-deps
+    fi
+}
+
+_run_pyenv_installer () {
+    ./pyenv-installer
+}

@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+OPWD_dev="$(pwd)"
+cd pyenv
+. ./pyenvrc
+cd "$OPWD_dev"
