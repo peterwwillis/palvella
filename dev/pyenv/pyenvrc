@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
-set -x
 
 if command -v apk 2>/dev/null 1>&2 ; then
     . ./pyenvrc.alpine
@@ -22,9 +21,15 @@ eval "$(pyenv init -)"
 
 eval "$(pyenv virtualenv-init -)"
 
-pyenv install --skip-existing -v 3.9.17
-pip install --upgrade pip
+if [ -r ../../.python-version ] ; then
+    PYENV_INSTALL_VERSION="$(cat ../../.python-version)"
+fi
+if [ -n "${PYENV_INSTALL_VERSION:-}" ] ; then
+    CFLAGS="-fPIC -DTHREAD_STACK_SIZE=0x100000" pyenv install --skip-existing -v "${PYENV_INSTALL_VERSION}"
+    pyenv global "$(pyenv versions --bare)"
+    #pip install --upgrade pip
+else
+    echo "$0: Error: could not detect PYENV_INSTALL_VERSION; not loading pyenv"
+fi
 
 _uninstall_pyenv_build_dependencies
-
-set +x

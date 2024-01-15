@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:1.4
 
-FROM python:3.9 AS frontend-builder
+FROM pyenv:alpine-3.18-python-3.9 AS frontend-builder
 
 WORKDIR /app
 COPY requirements.txt ./

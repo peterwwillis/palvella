@@ -9,9 +9,17 @@ _download_pyenv_installer () {
     fi
 }
 
-PYENV_BUILD_DEPENDENCIES="git bash build-base curl libffi-dev openssl-dev bzip2-dev zlib-dev readline-dev sqlite-dev xz-dev tk-dev"
+# Dependencies needed to run pyenv
+PYENV_DEPENDENCIES="bash ca-certificates"
+
+# Dependencies needed to build pyenv
+PYENV_BUILD_DEPENDENCIES="git build-base curl libffi-dev openssl-dev bzip2-dev zlib-dev readline-dev sqlite-dev xz-dev tk-dev"
 
 _install_pyenv_build_dependencies () {
+    for dep in $PYENV_DEPENDENCIES ; do
+        command -v "$dep" 2>/dev/null 1>&2 \
+            || apk add "$dep"
+    done
     if [ ! -d "$PYENV_ROOT" ] ; then
         $SUDO apk add --virtual pyenv-build-deps $PYENV_BUILD_DEPENDENCIES
     fi
@@ -28,5 +36,7 @@ _uninstall_pyenv_build_dependencies () {
 }
 
 _run_pyenv_installer () {
-    ./pyenv-installer
+    if [ ! -d "$HOME/.pyenv" ] ; then
+        ./pyenv-installer
+    fi
 }

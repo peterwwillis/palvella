@@ -6,7 +6,10 @@ export PYTHONDONTWRITEBYTECODE
 
 help:
 	@echo "Make targets:"
+	@echo "    pyenv"
+	@echo "    dev.environ"
 	@echo "    environ"
+	@echo "    poetry"
 	@echo "    lint"
 	@echo "    check"
 	@echo "    test"
@@ -15,66 +18,50 @@ help:
 	@echo "    compose-up"
 	@echo "    compose-down"
 
-all: environ check test run
+all: dev.environ check test run
 
+pyenv:
+	. ./.rc
 
-poetry:
-	poetry env use $$(which python3)
+poetry: environ
+	. ./.rc ; \
+	poetry env use $$(which python3) ; \
 	poetry install
 
-# Set up development environment
-environ: poetry
-	set -eu; . ./.venv/bin/activate ; \
-	python -m pip install --upgrade pip ; \
-	python -m pip install flake8 \
-                          flake8-bugbear \
-                          flake8-pie \
-                          flake8-simplify \
-                          flake8-alfred \
-                          flake8-async \
-                          flake8-secure-coding-standard \
-                          flake8-unused-arguments \
-                          flake8-warnings \
-                          flake8-comprehensions \
-                          flake8-implicit-str-concat \
-                          flake8-forbidden-func \
-                          flake8-no-implicit-concat \
-                          flake8-builtins \
-                          flake8-docstrings \
-                          flake8-fastapi \
-                          flake8-bandit \
-                          flake8-pylint \
-                          flake8-isort \
-                          pep8-naming \
-                          pydoclint[flake8] \
-                          dlint \
-                          isort \
-                          pylint \
-                          pytest \
-                          sqlparse
+#freeze:
+#	pip freeze > requirements.txt
+
+environ: pyenv
+	. ./.rc ; \
+	pip install -r requirements.txt
+
+dev.environ: pyenv
+	. ./.rc ; \
+	pip install -r dev/requirements.txt
 
 isort:
-	isort $(SRC_DIR)
+	. ./.rc ; \
+	poetry run isort $(SRC_DIR)
 
 lint:
-	set -eu; . ./.venv/bin/activate ; \
-	pylint --output-format=colorized --source-roots=. $(SRC_DIR)
+	. ./.rc ; \
+	poetry run pylint --output-format=colorized --source-roots=. $(SRC_DIR)
 
 check:
-	set -eu; . ./.venv/bin/activate ; \
-	flake8 $(SRC_DIR) --color always --count --exit-zero --statistics --show-source --max-line-length=127
+	. ./.rc ; \
+	poetry run flake8 $(SRC_DIR) --color always --count --exit-zero --statistics --show-source --max-line-length=127
 
 test:
-	set -eu; . ./.venv/bin/activate ; \
-	pytest $(SRC_DIR)
+	. ./.rc ; \
+	poetry run pytest $(SRC_DIR)
 
 run:
-	set -eu; . ./.venv/bin/activate ; \
-	DEBUG=1 python app.py
+	. ./.rc ; \
+	DEBUG=1 poetry run python app.py
 
 test-e2e:
-	set -eu; . ./.venv/bin/activate ; \
-	./test-e2e.sh
+	. ./.rc ; \
+	poetry run ./test-e2e.sh
 
 #compose-test-e2e: compose-build compose-up
 #	set -eu; . ./.venv/bin/activate ; \

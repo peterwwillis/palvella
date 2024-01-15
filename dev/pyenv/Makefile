@@ -17,6 +17,8 @@ pyenv-docker:
 	DOCKER_BUILDKIT=1 \
 		BUILDKIT_PROGRESS=plain \
 		docker build \
+			--build-arg PYENV_INSTALL_VERSION="$$(cat ../../.python-version)" \
 			-t pyenv:alpine \
 			-f Dockerfile \
 			.
+	docker tag pyenv:alpine pyenv:alpine-3.18-python-3.9
