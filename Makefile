@@ -61,7 +61,7 @@ run:
 
 test-e2e:
 	. ./.rc ; \
-	poetry run ./test-e2e.sh
+	poetry run ./test-e2e.sh 2>&1 | tee test-e2e.log
 
 #compose-test-e2e: compose-build compose-up
 #	set -eu; . ./.venv/bin/activate ; \
