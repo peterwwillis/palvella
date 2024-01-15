@@ -2025,4 +2025,4 @@ pyzmq = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "82ab373dfade36c87993a462c68855dbb51a674f675441160b2a372658c21c41"
+content-hash = "fc2830fd5cf0efd6b6b9c467d3bb8a2fddacf6e3d958e91b537f397e5df610ec"
