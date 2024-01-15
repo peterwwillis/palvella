@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+OPWD_dev="$(pwd)"; cd pyenv ; . ./.rc ; cd "$OPWD_dev"

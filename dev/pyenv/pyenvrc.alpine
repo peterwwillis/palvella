@@ -17,11 +17,11 @@ PYENV_BUILD_DEPENDENCIES="git build-base curl libffi-dev openssl-dev bzip2-dev z
 
 _install_pyenv_build_dependencies () {
     for dep in $PYENV_DEPENDENCIES ; do
-        command -v "$dep" 2>/dev/null 1>&2 \
-            || apk add "$dep"
+        apk info -q -e "$dep" \
+            || $SUDO apk add "$dep"
     done
     if [ ! -d "$PYENV_ROOT" ] ; then
-        $SUDO apk add --virtual pyenv-build-deps $PYENV_BUILD_DEPENDENCIES
+        $SUDO apk add --virtual .pyenv-build-deps $PYENV_BUILD_DEPENDENCIES
     fi
 }
 
@@ -31,7 +31,7 @@ _uninstall_pyenv_build_dependencies () {
        || grep -q docker /proc/1/cgroup \
        || rev /proc/1/cgroup | cut -d : -f 1 | rev | grep -q -v '^/$'
     then
-        $SUDO apk del pyenv-build-deps
+        $SUDO apk del .pyenv-build-deps
     fi
 }
 

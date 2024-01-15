@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
 # Load dev/ rc files
-OPWD="$(pwd)" ; cd dev ; . ./rc ; cd "$OPWD"
+OPWD="$(pwd)" ; cd dev ; . ./.rc ; cd "$OPWD"

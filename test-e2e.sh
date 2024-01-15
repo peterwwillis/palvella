@@ -2,7 +2,7 @@
 set -ux
 
 _killstaleapp () {
-    pkill -9 -fl "ython app.py"
+    pkill -9 -f "ython app.py"
 }
 _cleanup () {
     if [ -n "${res:-}" ] ; then
