@@ -23,7 +23,7 @@ class Message:
         data:                   Payload data.
     """
 
-    _logger = makeLogger(__module__ + "/Message")
+    logger = makeLogger(__module__ + "/Message")
 
     @dataclass
     class Identity:
@@ -127,7 +127,7 @@ class Message:
 
         self.data = self.Data()
         if 'data' in kwargs.keys():
-            #self._logger.debug(f"setting data as {kwargs['data']}")
+            #self.logger.debug(f"setting data as {kwargs['data']}")
             self.data = self.Data(kwargs['data'])
 
     def __repr__(self):

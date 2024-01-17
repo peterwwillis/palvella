@@ -76,18 +76,18 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
             elif self.socket_type == "pull":
                 self.socket_operation = "bind"
 
-        self._logger.debug(f"{self}: Running socket operation {self.socket_operation}")
+        self.logger.debug(f"{self}: Running socket operation {self.socket_operation}")
         if self.socket_operation == "connect":
             self.sock.connect(self.url)
         elif self.socket_operation == "bind":
             self.sock.bind(self.url)
 
         if self.identity != None:
-            self._logger.debug(f"setting sockopt(zmq.IDENTITY, {self.identity})")
+            self.logger.debug(f"setting sockopt(zmq.IDENTITY, {self.identity})")
             self.sock.setsockopt_string(zmq.IDENTITY, self.identity)
 
         if self.queue == True:
-            self._logger.debug(f"setting sockopt(zmq.SUBSCRIBE, {self.name})")
+            self.logger.debug(f"setting sockopt(zmq.SUBSCRIBE, {self.name})")
             self.sock.setsockopt_string(zmq.SUBSCRIBE, self.name)
 
     async def publish(self, message):
@@ -116,14 +116,14 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         for arg in message.data:
             msg_parts.append( encode_part(arg) )
 
-        self._logger.debug(f"zmq: sending messages ({len(msg_parts)})")
+        self.logger.debug(f"zmq: sending messages ({len(msg_parts)})")
 
         try:
             res = await self.sock.send_multipart(msg_parts=msg_parts, copy=False)
         except zmq.error.ZMQError as e:
             raise OperationError(e)
 
-        self._logger.debug(f"zmq: sent message, got {res}")
+        self.logger.debug(f"zmq: sent message, got {res}")
         return res
 
     async def consume(self, *args):
@@ -139,7 +139,7 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         # NOTE: 'copy=False' makes this a non-copying usage, which returns
         #       a frame, not a data payload.
         res = await self.sock.recv_multipart(copy=False)
-        self._logger.debug(f"zmq: received message {res}")
+        self.logger.debug(f"zmq: received message {res}")
 
         if len(res) < 2:
             raise Exception("message consumed had less than 2 frames")

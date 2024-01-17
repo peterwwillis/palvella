@@ -18,7 +18,7 @@ _cleanup () {
 }
 _run_app () {
     # Background the app
-    DEBUG=1 python app.py & pid=$!
+    python app.py & pid=$!
     echo "$pid"
 }
 _run_curl_post () {

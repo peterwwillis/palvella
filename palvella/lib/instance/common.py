@@ -18,7 +18,7 @@ from palvella.lib.instance.hook import Hooks
 from ..logging import makeLogger, logging
 
 
-_logger = makeLogger(__name__)
+logger = makeLogger(__name__)
 
 @dataclass(unsafe_hash=True)
 class ComponentObject:
@@ -33,7 +33,7 @@ class ComponentObject:
         return "%s(%r)" % (self.__class__, self.__dict__)
     def instance(self):
         if not self._instance:
-            _logger.debug(f"making {self.classref}(parent={self.parent}, config_data={self.config_data})")
+            logger.debug(f"making {self.classref}(parent={self.parent}, config_data={self.config_data})")
             self._instance = self.classref(parent=self.parent, config_data=self.config_data)
         return self._instance
 
@@ -50,7 +50,7 @@ class ComponentObjects:
     instances = []  # The list of instantiated objects
     objects = []  # The list of ComponentObject()s
 
-    _logger = makeLogger(__module__ + "/ComponentObjects")
+    logger = makeLogger(__module__ + "/ComponentObjects")
 
     def __repr__(self):
         return "%s(%r)" % (self.__class__, self.__dict__)
@@ -109,7 +109,7 @@ class ComponentObjects:
             # If any were found, process them
             if len(component_objects) > 0:
                 for obj in component_objects:
-                    self._logger.debug(f"Loading new component from object: {obj.classref}")
+                    self.logger.debug(f"Loading new component from object: {obj.classref}")
                     array.append(
                         ComponentObject(
                             classref=obj.classref, parent=self.parent,
@@ -118,7 +118,7 @@ class ComponentObjects:
                     )
             # Otherwise create new objects with no configuration
             else:
-                self._logger.debug(f"Loading new component {plugin_class}")
+                self.logger.debug(f"Loading new component {plugin_class}")
                 array.append(
                     ComponentObject(classref=plugin_class, parent=self.parent)
                 )
@@ -210,10 +210,10 @@ class Config:
                              if x.class_type == "plugin_base" \
                              and x.component_namespace == component_namespace]
             if len(plugin_base) < 1:
-                self._logger.debug(f"could not find plugin base for '{component_namespace}'")
+                self.logger.debug(f"could not find plugin base for '{component_namespace}'")
                 continue
             elif len(plugin_base) > 1:
-                self._logger.debug(f"too many plugin bases for '{component_namespace}'")
+                self.logger.debug(f"too many plugin bases for '{component_namespace}'")
                 continue
 
             # Validate schema
@@ -224,7 +224,7 @@ class Config:
                 dep = PluginDependency(parentclassname=plugin_base[0].__name__, plugin_type=plugin_type)
                 for plugin_class in match_class_dependencies(self, plugin_base[0].__subclasses__(), [dep]):
                     for item in config_data:
-                        _logger.debug(f"yielding new component object ({plugin_class})")
+                        logger.debug(f"yielding new component object ({plugin_class})")
                         yield plugin_class, ConfigData(item)
 
 
@@ -370,7 +370,7 @@ class Component(Plugin, class_type="base"):
         """
 
         if not component_namespace in self.config_data:
-            self._logger.debug(f"Warning: could not find component namespace '{component_namespace}' in self.config_data")
+            self.logger.debug(f"Warning: could not find component namespace '{component_namespace}' in self.config_data")
             return
 
         # Register a hook if this component (Job) has been configured

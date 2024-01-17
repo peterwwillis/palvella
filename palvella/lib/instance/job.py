@@ -20,7 +20,7 @@ class Job(Component, class_type="plugin_base"):
 
     #def run(self, **kwargs):
     #    """Run a Job."""
-    #    self._logger.debug(f"Job.run({kwargs})")
+    #    self.logger.debug(f"Job.run({kwargs})")
     #    for action in self.actions:
-    #        self._logger.debug(f"  action '{action}'")
+    #        self.logger.debug(f"  action '{action}'")
 

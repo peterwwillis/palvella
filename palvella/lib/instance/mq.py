@@ -65,7 +65,7 @@ class MessageQueue(Component, class_type="plugin_base"):
             if not hasattr(component, func):
                 raise Exception("object {component} does not have function {func}")
             funcref = getattr(component, func)
-            obj._logger.debug(f"run_func: running {funcref}")
+            obj.logger.debug(f"run_func: running {funcref}")
             results.append( await funcref(*args, **kwargs) )
 
         return results

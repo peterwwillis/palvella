@@ -15,7 +15,7 @@ class BasicJob(Job, class_type="plugin", plugin_type=PLUGIN_TYPE):
         return "%s(%r)" % (self.__class__, self.__dict__)
 
     def __pre_plugins__(self):
-        self._logger.debug(f"self {self} dict {self.__dict__}")
+        self.logger.debug(f"self {self} dict {self.__dict__}")
 
         self.parse_actions()
 
@@ -23,12 +23,12 @@ class BasicJob(Job, class_type="plugin", plugin_type=PLUGIN_TYPE):
         self.register_hook('triggers', self.receive_alert)
 
     async def receive_alert(self, hook, component_instance, message):
-        self._logger.debug(f"self: {self}")
-        self._logger.debug(f"Received alert:\n\thook {hook}\n\tcomponent_instance {component_instance}\n\tmessage {message}")
+        self.logger.debug(f"self: {self}")
+        self.logger.debug(f"Received alert:\n\thook {hook}\n\tcomponent_instance {component_instance}\n\tmessage {message}")
 
     def parse_actions(self):
         if not 'actions' in self.config_data:
-            self._logger.debug(f"Warning: no 'actions' found in self.config_data; returning")
+            self.logger.debug(f"Warning: no 'actions' found in self.config_data; returning")
             return
 
         self.parent.components.add_config_components(
@@ -37,4 +37,4 @@ class BasicJob(Job, class_type="plugin", plugin_type=PLUGIN_TYPE):
         )
         # TODO: Finish this section. Currently an object is getting created but never initialized.
         #       Needs some thinking about what to do.
-        self._logger.debug(f"Done adding actions from job {self}")
+        self.logger.debug(f"Done adding actions from job {self}")

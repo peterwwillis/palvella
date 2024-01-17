@@ -54,12 +54,12 @@ class Trigger(Component, class_type="plugin_base"):
         try:
             await self.publish(message)
         except OperationError as e:
-            self._logger.exception(f"Tried to publish() but failed: {e}")
+            self.logger.exception(f"Tried to publish() but failed: {e}")
             pass
 
         # TODO: Finish implementing the logic here so that when 'github_webhook' sends
         #       a trigger, it only calls the hooks which have a plugin_dep set for 'github_webhook'.
 
         for hook, component_instance in self.parent.hooks.match_hook_from_msg(message):
-            self._logger.debug(f"matching hook {hook} component_instance {component_instance}")
+            self.logger.debug(f"matching hook {hook} component_instance {component_instance}")
             await hook.callback(hook, component_instance, message)

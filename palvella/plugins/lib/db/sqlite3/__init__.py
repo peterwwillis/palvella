@@ -28,7 +28,7 @@ class SQLite3DB(DB, class_type="plugin", plugin_type=PLUGIN_TYPE):
         """Establish a connection to the SQLite3 database."""
         self.conn = sqlite3.connect(self.config_data['db_path'], check_same_thread=False)
         self.cursor = self.conn.cursor()
-        self._logger.debug(f"DB Connection established to {self.config_data['db_path']}")
+        self.logger.debug(f"DB Connection established to {self.config_data['db_path']}")
         self.ensure_tables_exist()
 
     def table_exists(self, name):

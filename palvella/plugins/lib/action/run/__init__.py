@@ -10,9 +10,9 @@ class RunAction(Action, class_type="plugin", plugin_type=PLUGIN_TYPE):
     """The 'RunAction' plugin class."""
 
     def __pre_plugins__(self):
-        self._logger.debug(f"self {self} config_data {self.config_data}")
+        self.logger.debug(f"self {self} config_data {self.config_data}")
         #self.register_hook('actions', self.receive_alert)
 
     async def receive_alert(self, hook, component_instance, message):
-        self._logger.debug(f"self: {self}")
+        self.logger.debug(f"self: {self}")
 

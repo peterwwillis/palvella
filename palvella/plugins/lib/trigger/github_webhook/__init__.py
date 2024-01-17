@@ -69,11 +69,12 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         event_type = FastAPIPlugin.get_header(request, "X-Github-Event")
         content_type = FastAPIPlugin.get_header(request, "content-type")
 
+        self.logger.info("github_webhook: received new message")
+
         digest = await self.get_digest(await data.body, hashfunc=hashlib.sha256)
         if digest is not None:
-            #self._logger.debug(f"sig '{sig}' digest '{digest}'")
             if not hmac.compare_digest(sig, digest):
-                self._logger.debug("github_webhook: invalid signature")
+                self.logger.info("github_webhook: invalid signature")
                 return JSONResponse({"error": "Invalid signature"}, status_code=400)
 
         jsondata = await data.json

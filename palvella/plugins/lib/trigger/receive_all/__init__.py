@@ -15,18 +15,18 @@ class ReceiveAllTriggers(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
     """Class of the Receive All Triggers trigger."""
 
     def __pre_plugins__(self):
-        self._logger.debug("Running receive_events()")
+        self.logger.debug("Running receive_events()")
         asyncio.create_task( self.receive_events() )
 
     async def receive_events(self):
         while True:
             await asyncio.sleep(0.2)
-            self._logger.debug(f"receive_events({self}): About to consume")
+            self.logger.debug(f"receive_events({self}): About to consume")
             gathered = await asyncio.gather( self.consume() )
 
             msg_objs = gathered[0]
             for arg in msg_objs:
-                self._logger.debug(f"got msg_objs {arg}")
+                self.logger.debug(f"got msg_objs {arg}")
             #if msg_obj # TODO: FINISH ME
             await self.trigger(*msg_objs)
 

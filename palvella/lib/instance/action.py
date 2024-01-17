@@ -12,4 +12,4 @@ class Action(Component, class_type="plugin_base"):
 
     def run(self, **kwargs):
         """Run an action."""
-        self._logger.debug(f"Action.run({kwargs})")
+        self.logger.debug(f"Action.run({kwargs})")

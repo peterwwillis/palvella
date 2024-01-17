@@ -12,13 +12,13 @@ import graphlib  # our poetry requirements include the 'graphlib_backport' modul
 from .logging import makeLogger
 
 
-_logger = makeLogger(__name__)
+logger = makeLogger(__name__)
 
 
 class Plugin:
     """The base class for plugins. Inherit this to make a new plugin class."""
     subclasses = []  # A list of all subclasses of this class
-    _logger = None  # makeLogger(__name__)
+    logger = None  # makeLogger(__name__)
     _plugins = None
     # Should be a list of PluginDependency objects
     depends_on = []
@@ -28,8 +28,8 @@ class Plugin:
 
     def __init__(self, **kwargs):
         """Given a set of key=value pairs, update the object with those as attributes."""  # noqa
-        self._logger = makeLogger(self.__class__.__module__ + "/" + self.__class__.__name__)
-        self._logger.debug(f"{self.__class__.__name__}.__init__({kwargs})")
+        self.logger = makeLogger(self.__class__.__module__ + "/" + self.__class__.__name__)
+        self.logger.debug(f"{self.__class__.__name__}.__init__({kwargs})")
         self.__dict__.update(kwargs)
 
     def __init_subclass__(cls, class_type=None, plugin_type=None, **kwargs):
@@ -72,7 +72,7 @@ def get_class(obj):
 def match_class_dependencies(self, objects, deps):
     """Match a class or instance of a class against a PluginDependency().
 
-       'self' is just any object with a '_logger' method.
+       'self' is just any object with a 'logger' method.
        'objects' is a list of either classes or class instances.
        'deps' is a list of PluginDepency() instances.
 
@@ -126,7 +126,7 @@ class WalkPlugins:
         class_graph:    A graph of classes and the subclasses dependent on them
     """
 
-    _logger = makeLogger(__module__ + "/WalkPlugins")
+    logger = makeLogger(__module__ + "/WalkPlugins")
 
     # The graph of class dependencies as they are discovered
     # (subclass Y depends on subclass X, etc)
@@ -170,10 +170,10 @@ class WalkPlugins:
         Stores the classes found in 'self.classes'.
         Stores a graph of class dependencies in 'self.class_graph'.
         """
-        #self._logger.debug(f"  walk_subclass(self, {cls})")
+        #self.logger.debug(f"  walk_subclass(self, {cls})")
         self.load_plugin_modules(cls)
         self.classes += [cls]
-        #self._logger.debug(f"  appended to self.classes {self.classes}")
+        #self.logger.debug(f"  appended to self.classes {self.classes}")
         subclasses = cls.__subclasses__()
         if len(subclasses) > 0:
             for x in subclasses:
@@ -196,7 +196,7 @@ class WalkPlugins:
         yielding the name of modules in said namespace.
         """
         if not hasattr(cls, 'plugin_namespace') or cls.plugin_namespace == None:
-            self._logger.debug(f"        No 'plugin_namespace' found in class {cls}")
+            self.logger.debug(f"        No 'plugin_namespace' found in class {cls}")
             yield
         else:
             if cls.plugin_namespace in self.searched_module_ns:

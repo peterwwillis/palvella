@@ -8,7 +8,7 @@ from palvella.lib.instance.message import Message
 
 from ..logging import makeLogger, logging
 
-_logger = makeLogger(__name__)
+logger = makeLogger(__name__)
 
 
 @dataclass
@@ -47,7 +47,7 @@ class Hooks:
         and data. The match_hook() function can be used to compare this hook against objects.
 
         """
-        _logger.debug(f"register_hook({self}, {plugin_dep}, {hook_type}, {callback}, {data})")
+        logger.debug(f"register_hook({self}, {plugin_dep}, {hook_type}, {callback}, {data})")
 
         components = match_class_dependencies(self, self.parent.plugins.classes, [plugin_dep])
         for component in components:
@@ -75,16 +75,16 @@ class Hooks:
                 if hook.component.plugin_namespace != instance.plugin_namespace \
                    or hook.component.plugin_type != instance.plugin_type:
                     continue
-                _logger.debug(f"match_hook: Found component instance {instance} matching hook component {hook.component}")
+                logger.debug(f"match_hook: Found component instance {instance} matching hook component {hook.component}")
 
                 if hook.component.plugin_namespace != msg.identity.plugin_namespace \
                    or hook.component.plugin_type != msg.identity.plugin_type:
                     continue
-                _logger.debug(f"match_hook: Found hook {hook} matches msg {msg.identity}")
+                logger.debug(f"match_hook: Found hook {hook} matches msg {msg.identity}")
 
                 if not self.match_hook_data(hook=hook, component_instance=instance, msg=msg):
                     continue
-                _logger.debug(f"match_hook: hook data matches msg data")
+                logger.debug(f"match_hook: hook data matches msg data")
 
                 yield hook, instance
 
