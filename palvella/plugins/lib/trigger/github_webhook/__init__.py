@@ -48,6 +48,7 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         # TODO: For each configured webhook, create a new instance with its
         #       own configuration (endpoint name, secret, repo, etc)
         for obj in fastapi:
+            self.logger.info(f"{self}: {obj.app}.add_api_route(\"/github_webhook\")")
             obj.app.add_api_route("/github_webhook", self.github_webhook, methods=["POST"])
 
     async def get_digest(self, data, hashfunc):
@@ -69,12 +70,12 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         event_type = FastAPIPlugin.get_header(request, "X-Github-Event")
         content_type = FastAPIPlugin.get_header(request, "content-type")
 
-        self.logger.info("github_webhook: received new message")
+        self.logger.info(f"github_webhook({self}, (client:{request.client}, method:{request.method}, url.scheme:{request.url.scheme}, url.port:{request.url.port}, url.path:'{request.url.path}'))")
 
         digest = await self.get_digest(await data.body, hashfunc=hashlib.sha256)
         if digest is not None:
             if not hmac.compare_digest(sig, digest):
-                self.logger.info("github_webhook: invalid signature")
+                self.logger.error("github_webhook: invalid signature")
                 return JSONResponse({"error": "Invalid signature"}, status_code=400)
 
         jsondata = await data.json

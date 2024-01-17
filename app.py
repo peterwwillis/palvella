@@ -4,12 +4,29 @@ import asyncio
 
 from palvella.lib import Instance, makeLogger
 
+
 logger = makeLogger(__name__)
 
 async def main():
 
+    #from cProfile import Profile
+    #from pstats import SortKey, Stats
+    #pr = Profile()
+    #pr.enable()
+    #pr.runcall()
+    #pr.disable()
+    #p = Stats(pr)           # create pstats obj based on profiler above.
+    #p.print_callers('isinstance')  # find all the callers of isinstance.
+    #(
+    #    Stats(pr)
+    #    .strip_dirs()
+    #    .sort_stats(SortKey.CALLS)
+    #    .print_stats()
+    #)
+
     inst = Instance(config_path="default.yaml")
     await inst.initialize()
+
     logger.debug(f"done loading instance {inst}\n\n")
 
     # Infinite loop to wait for tasks to die and finally exit ourselves.

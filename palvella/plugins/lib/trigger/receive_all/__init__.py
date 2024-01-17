@@ -27,6 +27,7 @@ class ReceiveAllTriggers(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
             msg_objs = gathered[0]
             for arg in msg_objs:
                 self.logger.debug(f"got msg_objs {arg}")
-            #if msg_obj # TODO: FINISH ME
-            await self.trigger(*msg_objs)
+            #if msg_obj 
+            # TODO: FINISH ME
+            #await self.trigger(*msg_objs)
 

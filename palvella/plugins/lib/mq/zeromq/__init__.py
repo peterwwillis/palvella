@@ -109,6 +109,9 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         """
         if not self.sock:           self._setup_socket()
 
+        if self.socket_type != 'push':
+            raise OperationError(f"cannot push on socket {self.sock}")
+
         msg_parts = []
         for arg in [message.identity, message.meta]:
             msg_parts.append( encode_part(arg) )
@@ -116,7 +119,7 @@ class ZeroMQ(MessageQueue, class_type="plugin", plugin_type=PLUGIN_TYPE):
         for arg in message.data:
             msg_parts.append( encode_part(arg) )
 
-        self.logger.debug(f"zmq: sending messages ({len(msg_parts)})")
+        self.logger.debug(f"zmq: sending messages ({len(msg_parts)}) on {self.sock}")
 
         try:
             res = await self.sock.send_multipart(msg_parts=msg_parts, copy=False)

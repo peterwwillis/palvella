@@ -7,6 +7,7 @@ from palvella.lib.instance import Component
 from palvella.lib.instance.message import Message
 from palvella.lib.plugin import PluginDependency
 
+from ..logging import makeLogger, logging
 
 class OperationError(Exception):
     """Raise an error during an operation of a message queue."""
@@ -22,19 +23,24 @@ class MessageQueue(Component, class_type="plugin_base"):
     plugin_namespace = "palvella.plugins.lib.mq"
     component_namespace = "mq"
 
-    @staticmethod
-    async def publish(obj, *args, **kwargs):
+    logger = makeLogger(__module__ + "/MessageQueue")
+
+    @classmethod
+    async def publish(cls, obj, *args, **kwargs):
         """
         Publish a message in a message queue.
 
         Uses the 'run_func' function (of this class) to call the "publish" function of MessageQueue components.
         """
 
+        cls.logger.info(f"publish({obj},{args},{kwargs})")
         return await MessageQueue.run_func(obj, *args, func="publish", **kwargs)
 
-    @staticmethod
-    async def consume(obj, *args, **kwargs):
+    @classmethod
+    async def consume(cls, obj, *args, **kwargs):
         """Consume a message from a queue. Returns MessageQueue.consume()"""
+
+        cls.logger.info(f"consume({obj},{args},{kwargs})")
         return await MessageQueue.run_func(obj, *args, func="consume", **kwargs)
 
     @staticmethod

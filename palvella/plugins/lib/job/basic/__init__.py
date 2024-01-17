@@ -23,8 +23,7 @@ class BasicJob(Job, class_type="plugin", plugin_type=PLUGIN_TYPE):
         self.register_hook('triggers', self.receive_alert)
 
     async def receive_alert(self, hook, component_instance, message):
-        self.logger.debug(f"self: {self}")
-        self.logger.debug(f"Received alert:\n\thook {hook}\n\tcomponent_instance {component_instance}\n\tmessage {message}")
+        self.logger.info(f"receive_alert({self}, {hook}, {component_instance}, {message})")
 
     def parse_actions(self):
         if not 'actions' in self.config_data:

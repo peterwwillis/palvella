@@ -38,6 +38,7 @@ class FastAPIPlugin(Frontend, class_type="plugin", plugin_type=PLUGIN_TYPE):
         #self.APP_ENTRY = "palvella.plugins.lib.frontend.fastapi:app"
         self.APP_ENTRY = self.app
 
+        self.logger.info(f"{self}: starting fastapi web server")
         if ASGI_SERVER_TYPE == "hypercorn":
             self.start_hypercorn()
         elif ASGI_SERVER_TYPE == "uvicorn":
