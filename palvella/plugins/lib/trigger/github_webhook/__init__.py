@@ -70,7 +70,7 @@ class GitHubWebhook(Trigger, class_type="plugin", plugin_type=PLUGIN_TYPE):
         event_type = FastAPIPlugin.get_header(request, "X-Github-Event")
         content_type = FastAPIPlugin.get_header(request, "content-type")
 
-        self.logger.info(f"github_webhook({self}, (client:{request.client}, method:{request.method}, url.scheme:{request.url.scheme}, url.port:{request.url.port}, url.path:'{request.url.path}'))")
+        self.logger.info(f"github_webhook(self={self}, request=(client={request.client}, method={request.method}, url.scheme={request.url.scheme}, url.port={request.url.port}, url.path='{request.url.path}'))")
 
         digest = await self.get_digest(await data.body, hashfunc=hashlib.sha256)
         if digest is not None:

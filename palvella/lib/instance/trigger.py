@@ -39,7 +39,7 @@ class Trigger(Component, class_type="plugin_base"):
         to prepend the message with an Identity Frame, identifying where the trigger originated.
         """
 
-        self.logger.info(f"trigger({self}, args, kwargs)")
+        self.logger.info(f"trigger(self={self}, args=(CONCEALED), kwargs=(CONCEALED))")
 
         message = None
         if len(args) == 1 and len(kwargs) < 1:

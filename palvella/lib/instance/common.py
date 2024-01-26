@@ -67,6 +67,19 @@ class ComponentObjects:
             self.instances.append(x.instance())
 
     def add_config_components(self, data, array):
+        """Adds ComponentObject()s to *array*, made up of the plugin class and config_data from *data*.
+
+        Parameters
+        ----------
+        data
+            A map from a configuration.
+        array
+            A list of config objects (e.g. `self.parent.config.objects`)
+
+        Returns
+        -------
+        None
+        """
         for plugin_class, config_data in self.parent.config.component_ns_config_objects(data):
             array.append(ComponentObject(classref=plugin_class, config_data=config_data))
 
@@ -175,13 +188,15 @@ class Config:
 
     def component_ns_config_objects(self, data):
         """
-        Parse dict `data` and return plugin class and data assignment.
+        Take a base configuration entry ('actions':...) and return plugin class and config data.
 
-        For each key:value (in the root of `data`) look for a key that matches the
+        For each *key*:*value* (in the root of `data`) look for a key that matches the
         'component_namespace' of a loaded plugin (of subclass_type 'plugin_base').
 
-        For each of those, method `validate_config_schema()` is run against the `misc_data`
-        value, and a plugin class and `config_data` item is returned.
+        With that plugin base, run `validate_config_schema()` on *value*.
+
+        Then iterate over *value*; for each plugin type found,
+        yield the plugin class and a ConfigData().
 
         Parameters
         ----------
@@ -200,7 +215,7 @@ class Config:
         Returns
         -------
         list
-            For each `item` (see above), return the plugin class and the item.
+            For each `item` (see above), yield the plugin_type class and ConfigData(item).
         """
         subclasses = self.parent.subclasses
 

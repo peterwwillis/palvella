@@ -33,14 +33,14 @@ class MessageQueue(Component, class_type="plugin_base"):
         Uses the 'run_func' function (of this class) to call the "publish" function of MessageQueue components.
         """
 
-        cls.logger.info(f"publish({obj},{args},{kwargs})")
+        cls.logger.info(f"publish(obj={obj}, args={args}, kwargs={kwargs})")
         return await MessageQueue.run_func(obj, *args, func="publish", **kwargs)
 
     @classmethod
     async def consume(cls, obj, *args, **kwargs):
         """Consume a message from a queue. Returns MessageQueue.consume()"""
 
-        cls.logger.info(f"consume({obj},{args},{kwargs})")
+        cls.logger.info(f"consume(obj={obj}, args={args}, kwargs={kwargs})")
         return await MessageQueue.run_func(obj, *args, func="consume", **kwargs)
 
     @staticmethod
