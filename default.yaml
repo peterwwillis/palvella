@@ -37,7 +37,7 @@ jobs:
   basic:
     - name: "Terraform plan-approve-apply pipeline"
 
-      engine: "local"
+      engine: local
 
       triggers:
         github_webhook:
