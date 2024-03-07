@@ -12,7 +12,7 @@ charset-normalizer==3.3.2
 cleo==2.1.0
 click==8.1.7
 crashtest==0.4.1
-cryptography==41.0.7
+cryptography==42.0.4
 dill==0.3.7
 distlib==0.3.8
 dlint==0.14.1
