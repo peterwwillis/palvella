@@ -8,17 +8,15 @@ This document describes the design of the program 'palvella', a plugin-driven au
 ---
 ## Context
 
-The 'palvella' application's purpose is to allow a user at a web browser to execute arbitrary command-line
-applications and interact with them. The end result should be that any command-line application can have
-its own web interface, so that a custom web interface does not need to be written for it. In addition,
+The 'palvella' application's original purpose was to allow a user at a web browser to execute arbitrary
+command-line applications and interact with them. The intended result was that any command-line application
+could have its own web interface, so that a custom web interface does not need to be written for it. In addition,
 new pipelines of tasks can be created, also with a custom web interface.
 
-Simply executing a command-line program and printing its output doesn't provide a lot of value for the
-user. To make the output more useful, a few extra features should be implemented:
+However, that purpose has pivoted to being an open-source replacement for the Jenkins automation server.
+This would allow people to move away from Jenkins to a more modern design that lacks the drawbacks of Jenkins.
+The hope is that the original purpose may also be supported eventually.
 
- - Convert terminal-based colors into web browser colors.
- - Allow command-line programs to output a format which can be converted into browser-friendly
-   prompts, to make use of browser-based widgets and input methods.
 
 ---
 ## Design Goals
