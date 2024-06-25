@@ -57,7 +57,7 @@ mccabe==0.7.0
 mdurl==0.1.2
 more-itertools==10.2.0
 msgpack==1.0.7
-packaging==23.2
+packaging==24.1
 pbr==6.0.0
 pep8-naming==0.13.3
 pexpect==4.9.0
