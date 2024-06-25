@@ -548,7 +548,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.8"
 fastapi = "^0.109.1"
-flask = "^3.0.0"
+flask = "^3.0.3"
 asgiref = "^3.7.2"
 flet = "^0.12.1"
 pywebio = "^1.8.3"
