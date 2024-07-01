@@ -26,7 +26,7 @@ poetry==1.7.1
 poetry-core==1.8.1
 poetry-plugin-export==1.6.0
 ptyprocess==0.7.0
-pycparser==2.21
+pycparser==2.22
 pyproject_hooks==1.0.0
 rapidfuzz==3.6.1
 requests==2.32.0

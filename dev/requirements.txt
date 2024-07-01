@@ -69,7 +69,7 @@ poetry-core==1.8.1
 poetry-plugin-export==1.6.0
 ptyprocess==0.7.0
 pycodestyle==2.11.1
-pycparser==2.21
+pycparser==2.22
 pydantic==2.5.3
 pydantic_core==2.14.6
 pydoclint==0.3.8
