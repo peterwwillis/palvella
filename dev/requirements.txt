@@ -16,7 +16,7 @@ cryptography==42.0.4
 dill==0.3.7
 distlib==0.3.8
 dlint==0.14.1
-docstring_parser_fork==0.0.5
+docstring_parser_fork==0.0.9
 dulwich==0.21.7
 exceptiongroup==1.2.0
 fastapi==0.109.1
