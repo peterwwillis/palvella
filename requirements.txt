@@ -38,4 +38,4 @@ tomlkit==0.12.3
 trove-classifiers==2024.1.8
 urllib3==2.2.2
 virtualenv==20.25.0
-zipp==3.17.0
+zipp==3.19.1
